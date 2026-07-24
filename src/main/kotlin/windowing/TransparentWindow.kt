@@ -2,10 +2,10 @@ package org.soyuz.windowing
 
 import org.lwjgl.glfw.GLFW
 
-class TransparentWindow(
+open class TransparentWindow(
     title: String = "Bump",
-    initialWidth: Int = 800,
-    initialHeight: Int = 600,
+    initialWidth: Int = 1920,
+    initialHeight: Int = 1080,
     shareContext: Long = 0L
 ) : Window(title, initialWidth, initialHeight, shareContext) {
 

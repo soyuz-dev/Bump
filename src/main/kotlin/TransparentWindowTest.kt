@@ -171,6 +171,7 @@ fun main() {
     engine.loadScene(scene)
 
     window.onResize { w, h ->
+        if (window.isMinimized()) return@onResize
         println("resize fired: $w, $h")
         resizeHandle.position = Vector2D(w - 15.0, h - 15.0)
         body.shape = RectangleShape(w.toDouble(), (h - 30).toDouble())

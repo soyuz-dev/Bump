@@ -23,13 +23,14 @@ import org.soyuz.util.Color
 import org.soyuz.util.Dynamic
 import org.soyuz.util.math.Transform
 import org.soyuz.util.math.Vector2D
+import org.soyuz.windowing.TransparentWindow
 
 fun main() {
     Application.init()
     val width = 800
     val height = 600
     val camera = Camera()
-    val window = Window(
+    val window = TransparentWindow(
         title = "Bump - Dragging Test",
         initialWidth = width,
         initialHeight = height,

@@ -20,6 +20,10 @@ fun main() {
     println("6. label")
     window.addEntity(label)
     window.show()
-    window.camera.setRotation(1f)
+    var rotation = 0f
+    window.engine {
+        rotation += it.toFloat()
+        window.camera.setRotation(rotation)
+    }
     Application.run()
 }

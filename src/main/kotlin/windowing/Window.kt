@@ -1,6 +1,8 @@
 package org.soyuz.windowing
 
 import org.lwjgl.glfw.GLFW
+import org.lwjgl.glfw.GLFW.glfwGetCurrentContext
+import org.lwjgl.glfw.GLFW.glfwMakeContextCurrent
 import org.lwjgl.opengl.GL11
 import org.lwjgl.system.MemoryUtil
 import org.soyuz.input.KeyListener
@@ -71,8 +73,13 @@ open class Window(
     init {
         configureHints()
 
+
+
         handle = GLFW.glfwCreateWindow(width, height, title, MemoryUtil.NULL, shareContext)
         if (handle == MemoryUtil.NULL) throw RuntimeException("Failed to create window")
+
+        glfwMakeContextCurrent(handle)
+        println("Context current: ${glfwGetCurrentContext()}")
         setupCallbacks()
     }
 

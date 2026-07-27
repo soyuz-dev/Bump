@@ -36,7 +36,7 @@ fun main() {
     val eventBus = RuntimeEventBus()
     val physicsSystem = RuntimePhysicsSystem(collisionSystem, eventBus)
 
-    val window = TransparentWindow(
+    val window = Window(
         title = "Bump - BrickPit",
         initialWidth = width,
         initialHeight = height,

@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "org.soyuz"
-version = "1.3.0"
+version = "1.3.0-alpha"
 
 repositories {
     mavenCentral()
@@ -60,9 +60,6 @@ tasks.test {
 }
 
 tasks.jar {
-    manifest {
-        attributes["Main-Class"] = "org.soyuz.MainKt"
-    }
     from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

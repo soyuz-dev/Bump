@@ -11,7 +11,7 @@ A quickstart guide to building things with Bump. For architecture details and de
 6. [UI System](#ui-system)
 7. [Audio](#audio)
 8. [Timers & Game Loop](#timers--game-loop)
-9. [Multi-Window](#multi-window)
+9. [Windowing](windowing)
 10. [Camera & Screen Effects](#camera--screen-effects)
 11. [Observable Entities](#observable-entities)
 12. [Where Files Go](#where-files-go)
@@ -281,7 +281,37 @@ engine.during(500.0) { progress ->
 
 ---
 
-## Multi-Window
+## Windowing
+
+### Standard Window
+
+```kotlin
+val window = Window("My Game", 800, 600)
+val engine = RuntimeEngine(window, physicsSystem, camera)
+Application.windows.add(window, engine) { /* setup */ }
+```
+
+### Transparent Window
+```kotlin
+val window = TransparentWindow("Transparent", 400, 300)
+// so on and so forth, as TransparentWindow inherits Window
+```
+
+**Note**: On NVIDIA GPUs, transparency requires a control panel setting:
+Vulkan/OpenGL present method → "Prefer native"
+
+### Custom Window (Alpha)
+```kotlin
+val window = CustomWindow("My App", 600, 400, font)
+window.x = 200; window.y = 200
+window.addEntity(myContentEntity)
+window.show()
+```
+Creates a transparent window with pre-built title bar, close button, and drag-to-move. Content entities are added normally. See CustomWindowTest.kt for a full example.
+
+**Warning**: Custom windows are in alpha. API might change in the next update. Tested only on Windows with Intel and NVIDIA GPUs. Dynamic resize is not yet supported.
+
+### Multiple Windows
 
 ```kotlin
 val window1 = Window("Window 1", 800, 600)
@@ -483,21 +513,23 @@ hexdump -C file.ogg | head -1
 
 ## Quick Reference
 
-| Task | Code |
-|------|------|
-| Create entity | `DefaultGameEntity("id")` |
-| Set position | `entity.position = Vector2D(x, y)` |
-| Set shape | `entity.shape = CircleShape(r)` |
-| Set color | `entity.painter = SolidColor(Color(r,g,b))` |
-| Add collider | `entity.collider = Collider(shape)` |
-| Add physics | `body = PointMass(mass) with gravity` |
-| Register physics | `physicsSystem.registerBody(id, body)` |
-| Register collider | `collisionSystem.registerCollider(id, collider)` |
-| Add to scene | `scene.addEntity(entity)` |
-| Load font | `Assets.font("roboto")` |
-| Load texture | `Assets.texture("cat")` |
-| Load audio | `Assets.audio("meow")` |
-| Every frame | `engine { dt -> ... }` |
-| After delay | `engine.after(ms) { ... }` |
-| Make button | `engine.ui.button("id", x, y, w, h) { ... }` |
-| Make label | `engine.ui.label("id", x, y, "text", font, size, color)` |
+| Task               | Code                                                     |
+|--------------------|----------------------------------------------------------|
+| Create entity      | `DefaultGameEntity("id")`                                |
+| Set position       | `entity.position = Vector2D(x, y)`                       |
+| Set shape          | `entity.shape = CircleShape(r)`                          |
+| Set color          | `entity.painter = SolidColor(Color(r,g,b))`              |
+| Add collider       | `entity.collider = Collider(shape)`                      |
+| Add physics        | `body = PointMass(mass) with gravity`                    |
+| Register physics   | `physicsSystem.registerBody(id, body)`                   |
+| Register collider  | `collisionSystem.registerCollider(id, collider)`         |
+| Add to scene       | `scene.addEntity(entity)`                                |
+| Load font          | `Assets.font("roboto")`                                  |
+| Load texture       | `Assets.texture("cat")`                                  |
+| Load audio         | `Assets.audio("meow")`                                   |
+| Every frame        | `engine { dt -> ... }`                                   |
+| After delay        | `engine.after(ms) { ... }`                               |
+| Make button        | `engine.ui.button("id", x, y, w, h) { ... }`             |
+| Make label         | `engine.ui.label("id", x, y, "text", font, size, color)` |
+| Transparent window | `TransparentWindow("title", w, h)`                       |
+| Custom window      | `CustomWindow("title", w, h, font)`                      |

@@ -10,6 +10,34 @@ Feature-complete for 2D games. The engine runs, the commit messages are unhinged
 
 See [GUIDE.md](GUIDE.md) for a quickstart to using Bump.
 
+## What's New
+
+Added support for transparent, borderless windows with custom chrome rendered entirely by the engine.
+
+- `TransparentWindow` — a `Window` subclass with alpha-enabled framebuffer and transparent clear color
+- `CustomWindow` — extends `TransparentWindow` with pre-built title bar, close button, and drag-to-move
+- Camera now supports `setRotation()` for rotated views
+- `Window.onResize()` callback for responsive layouts
+- `Window.configureHints()` override point for subclasses
+
+## Platform Support
+- ✅ Windows 10/11 with Intel Iris Xe Graphics (works out of the box)
+- ✅ Windows 10/11 with NVIDIA GPU (requires control panel setting: Vulkan/OpenGL present method → "Prefer native")
+- ❌ Linux (not tested)
+- ❌ macOS (not tested)
+
+
+## Known Issues
+- Dynamic window resize causes entity/collider desync (fixed-size windows only for now)
+- Multi-window transparency not tested
+- Close button requires entities to be added in correct z-order
+
+## Demo
+`CustomWindowTest.kt` — creates a transparent window with title bar, close button, and a label.
+
+## Warning
+**Alpha.** Transparent windowing is experimental. Tested only on Windows with Intel and NVIDIA GPUs. Expect platform-specific quirks.
+
 ### What works
 - **Application & Windowing:** `Application` object owns GLFW lifecycle and global config. `Window` is a pure GLFW wrapper with mutable properties and recursion-safe callbacks. `WindowManager` orchestrates multiple windows with context switching and per-window input routing.
 - **Engine:** `RuntimeEngine` scopes `UISystem`, `UI` factory, `Input`, timers (`everyFrame`, `forEvery`, `after`, `during`), and the `Dynamic` update loop. No GLFW knowledge. Fixed-timestep physics.

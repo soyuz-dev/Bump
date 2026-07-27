@@ -173,6 +173,7 @@ fun main() {
         val t = if (raw < 1.0) raw else 2.0 - raw
         val pulse = Easing.quadInOut(t)
         circle.shape = CircleShape(60.0 * pulse + 80.0)
+
     }
 
 

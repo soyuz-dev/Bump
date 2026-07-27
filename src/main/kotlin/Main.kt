@@ -24,6 +24,7 @@ import org.soyuz.engine.ui.Interactive
 import org.soyuz.input.MouseListener
 import org.soyuz.util.Assets
 import org.soyuz.util.math.Vector2D
+import org.soyuz.windowing.TransparentWindow
 import kotlin.math.roundToInt
 
 fun main() {

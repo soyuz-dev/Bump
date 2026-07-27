@@ -1,12 +1,14 @@
 
 import org.gradle.internal.os.OperatingSystem
+
+
 plugins {
     kotlin("jvm") version "2.3.10"
     application
 }
 
 group = "org.soyuz"
-version = "1.2.0"
+version = "1.3.0-alpha"
 
 repositories {
     mavenCentral()
@@ -36,6 +38,9 @@ dependencies {
     implementation("org.lwjgl:lwjgl-stb:$lwjglV")
     implementation("org.lwjgl:lwjgl-openal:${lwjglV}")
 
+    implementation("net.java.dev.jna:jna:5.14.0")
+    implementation("net.java.dev.jna:jna-platform:5.14.0")
+
     runtimeOnly("org.lwjgl:lwjgl::$lwjglNatives")
     runtimeOnly("org.lwjgl:lwjgl-glfw::$lwjglNatives")
     runtimeOnly("org.lwjgl:lwjgl-opengl::$lwjglNatives")
@@ -55,9 +60,6 @@ tasks.test {
 }
 
 tasks.jar {
-    manifest {
-        attributes["Main-Class"] = "org.soyuz.MainKt"
-    }
     from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

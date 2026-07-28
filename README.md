@@ -22,10 +22,10 @@ Added support for transparent, borderless windows with custom chrome rendered en
 
 ## Platform Support
 - ✅ Windows 10/11 with Intel Iris Xe Graphics (works out of the box)
-- ✅ Windows 10/11 with NVIDIA GPU (requires control panel setting: Vulkan/OpenGL present method → "Prefer native")
-- ❌ Linux (not tested)
-- ❌ macOS (not tested)
-
+- ✅ Windows 10/11 with NVIDIA GPU (requires control panel setting for transparency: Vulkan/OpenGL present method → "Prefer native")
+- ✅ Linux (tested on Ubuntu 22.04 LTS and 24.04 LTS, both native and WSL2 with WSLg)
+  - WSL2 audio may require: `export PULSE_SERVER=unix:/mnt/wslg/PulseServer`
+- ❌ macOS (not tested, architecturally supported)
 
 ## Known Issues
 - Dynamic window resize causes entity/collider desync (fixed-size windows only for now)
@@ -142,7 +142,7 @@ org.soyuz
 ## Performance
 
 Tested on a Lenovo Yoga L13 Gen 2 (integrated graphics, passive cooling):
-- 50-body n-body simulation with CCD and per-pair gravity: locked 60fps without fan activation
+- 50-body n-body simulation with CCD and per-pair gravity: 2000fps without vsync without fan activation
 - Broadphase bounding circles: 3-7x FPS improvement over brute-force narrowphase
 - Triple pendulum with rod constraints: stable for 10+ minutes with no energy drift
 - Desktop (dedicated GPU): brickpit simulation at 3,000+ FPS

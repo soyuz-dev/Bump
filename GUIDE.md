@@ -11,7 +11,7 @@ A quickstart guide to building things with Bump. For architecture details and de
 6. [UI System](#ui-system)
 7. [Audio](#audio)
 8. [Timers & Game Loop](#timers--game-loop)
-9. [Windowing](windowing)
+9. [Windowing](#windowing)
 10. [Camera & Screen Effects](#camera--screen-effects)
 11. [Observable Entities](#observable-entities)
 12. [Where Files Go](#where-files-go)
@@ -452,6 +452,14 @@ OpenGL functions must be called when a window's context is active. If you get th
 ### Massive FPS drop when many entities are on screen
 - The collision broadphase uses bounding circles. If entities are clustered, narrowphase SAT still runs on all pairs that pass the circle check. For 100+ entities, consider spreading them out.
 - Text re-rasterization is expensive. Don't update `TextPainter.text` every frame unless needed.
+
+### Audio doesn't play on WSL
+- WSL2 with WSLg has audio built-in but needs the PulseAudio socket configured:
+  ```bash
+  echo 'export PULSE_SERVER=unix:/mnt/wslg/PulseServer' >> ~/.bashrc
+  source ~/.bashrc
+  ```
+- Native Linux with PulseAudio/ALSA works out of the box.
 
 ---
 

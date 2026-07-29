@@ -4,7 +4,7 @@ A 2D game engine built in Kotlin with LWJGL. Designed for a DSL-driven workflow 
 
 ## Status
 
-Feature-complete for 2D games. The engine runs, the commit messages are unhinged, the DSL is next.
+Core features are complete for 2D games. The engine runs fast, the commit messages are unhinged, the DSL is next.
 
 ## Quickstart
 

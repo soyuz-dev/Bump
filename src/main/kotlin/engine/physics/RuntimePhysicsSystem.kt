@@ -280,13 +280,8 @@ class RuntimePhysicsSystem(
         val vAlongTangent = relVelAtContact.dot(tangent)
 
         if (abs(vAlongTangent) > 1e-5) {
-            val rACrossT = rA.cross(tangent)
-            val rBCrossT = rB.cross(tangent)
 
-            val invMassEffectiveA_T = invMassA + (rACrossT * rACrossT) * if (bodyA is RigidBody) bodyA.inverseInertia else 0.0
-            val invMassEffectiveB_T = invMassB + (rBCrossT * rBCrossT) * if (bodyB is RigidBody) bodyB.inverseInertia else 0.0
-
-            val frictionCoeff = 0.3
+            val frictionCoeff = sqrt(bodyA.restitution * bodyB.restitution)
             val frictionMagnitude = frictionCoeff * abs(j)
             val frictionImpulse = tangent * -sign(vAlongTangent) * frictionMagnitude
 

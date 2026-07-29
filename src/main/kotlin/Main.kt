@@ -68,7 +68,7 @@ fun main() {
     val gravity = ConstantAccelerationField(Vector2D(0.0, 981.0))
     var entityCount = 0
 
-    fun makeBall(x: Double, y: Double, vx: Double, vy: Double, mass: Double = 1.0, radius: Double = 10.0, restitution: Double = .7) {
+    fun makeBall(x: Double, y: Double, vx: Double, vy: Double, mass: Double = 1.0, radius: Double = 10.0, restitution: Double = .5) {
         val id = "ball_${entityCount++}"
         val ball = DefaultGameEntity(id)
         ball.position = Vector2D(x, y)
@@ -148,6 +148,7 @@ fun main() {
         window.title = "Bump!   Thinguses:$entityCount, fps: ${(1/it).roundToInt()}"
     }
 
+    window.setVSync(false)
     engine.loadScene(scene)
     Application.run()
 }

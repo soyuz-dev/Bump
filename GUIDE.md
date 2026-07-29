@@ -3,27 +3,78 @@
 A quickstart guide to building things with Bump. For architecture details and design philosophy, see [README.md](README.md).
 
 ## Table of Contents
-1. [Minimal Program](#minimal-program)
-2. [Entities & Shapes](#entities--shapes)
-3. [Rendering](#rendering)
-4. [Physics](#physics)
-5. [Joints](#joints)
-6. [UI System](#ui-system)
-7. [Audio](#audio)
-8. [Timers & Game Loop](#timers--game-loop)
-9. [Windowing](#windowing)
-10. [Camera & Screen Effects](#camera--screen-effects)
-11. [Observable Entities](#observable-entities)
-12. [Where Files Go](#where-files-go)
-13. [Common Issues and Quick Fixes](#common-issues-and-quick-fixes)
-14. [File Format Issues](#file-format-issues)
-15. [Quick Reference](#quick-reference)
+1. [Installation](#installation)
+2. [Minimal Program](#minimal-program)
+3. [Entities & Shapes](#entities--shapes)
+4. [Rendering](#rendering)
+5. [Physics](#physics)
+6. [Joints](#joints)
+7. [UI System](#ui-system)
+8. [Audio](#audio)
+9. [Timers & Game Loop](#timers--game-loop)
+10. [Windowing](windowing)
+11. [Camera & Screen Effects](#camera--screen-effects)
+12. [Observable Entities](#observable-entities)
+13. [Where Files Go](#where-files-go)
+14. [Common Issues and Quick Fixes](#common-issues-and-quick-fixes)
+15. [File Format Issues](#file-format-issues)
+16. [Quick Reference](#quick-reference)
+
+---
+
+## Installation
+
+### As a Dependency (JitPack)
+
+Add JitPack to your `settings.gradle.kts`:
+```kotlin
+repositories {
+    mavenCentral()
+    maven { url = uri("https://jitpack.io") }
+}
+```
+
+Add Bump and LWJGL natives to your `build.gradle.kts`:
+```kotlin
+val lwjglV = "3.3.3"
+val lwjglNatives = when {
+    System.getProperty("os.name").contains("Windows") -> "natives-windows"
+    System.getProperty("os.name").contains("Linux") -> "natives-linux"
+    System.getProperty("os.name").contains("Mac") -> "natives-macos"
+    else -> throw GradleException("Unsupported OS")
+}
+
+dependencies {
+    implementation("com.github.soyuz-dev:Bump:v1.3-alpha")
+    
+    // LWJGL natives (required — platform-specific binaries)
+    runtimeOnly("org.lwjgl:lwjgl::$lwjglNatives")
+    runtimeOnly("org.lwjgl:lwjgl-glfw::$lwjglNatives")
+    runtimeOnly("org.lwjgl:lwjgl-opengl::$lwjglNatives")
+    runtimeOnly("org.lwjgl:lwjgl-stb::$lwjglNatives")
+    runtimeOnly("org.lwjgl:lwjgl-openal::$lwjglNatives")
+}
+```
+
+### From Source
+```bash
+git clone https://github.com/soyuz-dev/Bump.git
+cd Bump
+./gradlew build
+```
 
 ---
 
 ## Minimal Program
 
 ```kotlin
+import org.soyuz.engine.core.Application
+import org.soyuz.engine.core.RuntimeEngine
+import org.soyuz.engine.render.*
+import org.soyuz.engine.scene.RuntimeScene
+import org.soyuz.windowing.Window
+import org.soyuz.util.Assets
+
 fun main() {
     Application.init()
     val camera = Camera()
@@ -248,6 +299,12 @@ sound.stop()
 
 Audio files go in `src/main/resources/audio/`. OGG format only.
 
+**WSL2 Audio Setup:**
+```bash
+echo 'export PULSE_SERVER=unix:/mnt/wslg/PulseServer' >> ~/.bashrc
+source ~/.bashrc
+```
+
 ---
 
 ## Timers & Game Loop
@@ -293,11 +350,11 @@ Application.windows.add(window, engine) { /* setup */ }
 
 ### Transparent Window
 ```kotlin
-val window = TransparentWindow("Transparent", 400, 300)
-// so on and so forth, as TransparentWindow inherits Window
+val window = TransparentWindow("Overlay", 400, 300)
+// Window is borderless and transparent — only rendered content is visible
 ```
 
-**Note**: On NVIDIA GPUs, transparency requires a control panel setting:
+**Note:** On NVIDIA GPUs, transparency requires a control panel setting:
 Vulkan/OpenGL present method → "Prefer native"
 
 ### Custom Window (Alpha)
@@ -307,9 +364,10 @@ window.x = 200; window.y = 200
 window.addEntity(myContentEntity)
 window.show()
 ```
-Creates a transparent window with pre-built title bar, close button, and drag-to-move. Content entities are added normally. See CustomWindowTest.kt for a full example.
 
-**Warning**: Custom windows are in alpha. API might change in the next update. Tested only on Windows with Intel and NVIDIA GPUs. Dynamic resize is not yet supported.
+Creates a transparent window with pre-built title bar, close button, and drag-to-move. Content entities are added normally. See `CustomWindowTest.kt` for a full example.
+
+> **Warning:** Custom windows are in alpha. API might change in the next updates. Tested only on Windows with Intel and NVIDIA GPUs, and WSLg. Dynamic resize is not yet supported.
 
 ### Multiple Windows
 
@@ -322,7 +380,6 @@ val engine2 = RuntimeEngine(window2, null, camera2)
 Application.windows.add(window1, engine1) { /* setup */ }
 Application.windows.add(window2, engine2) { /* setup */ }
 
-// Setup scenes, entities...
 Application.run()  // runs both windows
 ```
 
@@ -354,7 +411,7 @@ camera.zoom(1.1f)       // multiply current zoom by 1.1
 
 The camera centers zoom on the middle of the view. Camera movement and zoom are handled independently. Zoom changes the visible world area, while position changes the center point being viewed.
 
-Take note that UI elements are rendered in screen space and are unaffected by camera movement or zoom.
+UI elements are rendered in screen space and are unaffected by camera movement or zoom.
 
 ### Easing Functions
 Use the `Easing` library for smooth animations:
@@ -432,6 +489,7 @@ OpenGL functions must be called when a window's context is active. If you get th
 - Did you call `Application.init()`? This initializes `AudioSystem`.
 - Are your audio files OGG format? WAV is not supported.
 - Check the file path: `Assets.audio("meow")` loads `/audio/meow.ogg`.
+- On WSL2: Set `export PULSE_SERVER=unix:/mnt/wslg/PulseServer`.
 
 ### Timer callbacks not firing
 - Timers added during a timer callback (e.g., `after` inside `everyFrame`) are deferred to the next frame. This prevents concurrent modification.
@@ -453,13 +511,9 @@ OpenGL functions must be called when a window's context is active. If you get th
 - The collision broadphase uses bounding circles. If entities are clustered, narrowphase SAT still runs on all pairs that pass the circle check. For 100+ entities, consider spreading them out.
 - Text re-rasterization is expensive. Don't update `TextPainter.text` every frame unless needed.
 
-### Audio doesn't play on WSL
-- WSL2 with WSLg has audio built-in but needs the PulseAudio socket configured:
-  ```bash
-  echo 'export PULSE_SERVER=unix:/mnt/wslg/PulseServer' >> ~/.bashrc
-  source ~/.bashrc
-  ```
-- Native Linux with PulseAudio/ALSA works out of the box.
+### Transparent window appears opaque on NVIDIA
+- Open NVIDIA Control Panel → 3D Settings → Vulkan/OpenGL present method → set to "Prefer native"
+- This is a known NVIDIA driver default. Intel GPUs work out of the box.
 
 ---
 
@@ -498,7 +552,6 @@ Bump uses the file extension to decide how to load a file. If the bytes inside d
 
 **Windows (PowerShell):**
 ```powershell
-# Check first few bytes (magic number)
 Get-Content .\file.ogg -Encoding Byte -TotalCount 4
 ```
 
@@ -513,7 +566,7 @@ Get-Content .\file.ogg -Encoding Byte -TotalCount 4
 
 **Linux/macOS:**
 ```bash
-file file.ogg          # prints detected format
+file file.ogg
 hexdump -C file.ogg | head -1
 ```
 

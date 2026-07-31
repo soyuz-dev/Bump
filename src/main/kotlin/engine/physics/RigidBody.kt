@@ -8,7 +8,7 @@ class RigidBody(
     val width: Double = 1.0,
     val height: Double = 1.0,
     override val restitution: Double = 0.3,
-    val friction: Double = 0.2
+    override val friction: Double = 0.2
 ) : PhysicsBody {
 
     private val pointMass = PointMass(mass)

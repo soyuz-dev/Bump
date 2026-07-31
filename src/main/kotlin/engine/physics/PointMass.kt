@@ -6,7 +6,8 @@ import org.soyuz.util.math.Vector2D
 
 class PointMass(
     mass: Double = 1.0,
-    override val restitution: Double = 1.0
+    override val restitution: Double = 1.0 ,
+    override val friction: Double = 0.3
 ) : PhysicsBody {
     init {
         require(mass >= 0.0) { "Mass cannot be negative: $mass" }

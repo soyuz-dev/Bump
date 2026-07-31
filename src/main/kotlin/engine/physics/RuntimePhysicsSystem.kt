@@ -281,7 +281,7 @@ class RuntimePhysicsSystem(
 
         if (abs(vAlongTangent) > 1e-5) {
 
-            val frictionCoeff = sqrt(bodyA.restitution * bodyB.restitution)
+            val frictionCoeff = sqrt(bodyA.friction * bodyB.friction)
             val frictionMagnitude = frictionCoeff * abs(j)
             val frictionImpulse = tangent * -sign(vAlongTangent) * frictionMagnitude
 

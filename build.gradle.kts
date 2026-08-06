@@ -60,6 +60,9 @@ tasks.test {
 }
 
 tasks.jar {
+    manifest {
+        attributes["Main-Class"] = "org.soyuz.AVTestKt"
+    }
     from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

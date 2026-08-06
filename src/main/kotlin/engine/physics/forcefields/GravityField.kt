@@ -17,8 +17,8 @@ class GravityField(private val G: Double = 5e6) : EntityAwareForceField {
         val expG = ((G.toRawBits() shr 52) and 0x7FF) - 1023
         val expM1 = ((mass.toRawBits() shr 52) and 0x7FF) - 1023
         val expM2 = ((otherMass.toRawBits() shr 52) and 0x7FF) - 1023
-        val expR2 = ((distSq.toRawBits() shr 52) and 0x7FF) - 1023
-        return expG + expM1 + expM2 - expR2
+        val expR_2 = ((distSq.toRawBits() shr 52) and 0x7FF) - 1023
+        return expG + expM1 + expM2 - expR_2
     }
 
     override fun registerBody(entityId: String, body: PhysicsBody, position: Vector2D) {

@@ -66,7 +66,6 @@ class RuntimeEngine(
     }
 
     override fun loadScene(scene: Scene) {
-        currentScene?.cleanup()
         currentScene = scene
         if (running) scene.init()
     }

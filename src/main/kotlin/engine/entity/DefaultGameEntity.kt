@@ -2,6 +2,7 @@ package org.soyuz.engine.entity
 
 import org.soyuz.engine.collision.Collider
 import org.soyuz.engine.render.Painter
+import org.soyuz.engine.scene.Scene
 import org.soyuz.engine.shape.Shape2D
 import org.soyuz.engine.ui.Interactive
 import org.soyuz.util.math.Transform
@@ -102,4 +103,11 @@ open class DefaultGameEntity(
     init {
         this.shape = shape
     }
+
+
+    infix fun at(position: Vector2D) = also { this.position = position }
+    infix fun with(shape: Shape2D) = also { this.shape = shape }
+    infix fun with(painter: Painter) = also { this.painter = painter }
+    infix fun within(scene: Scene) = also { scene.addEntity(this) }
 }
+

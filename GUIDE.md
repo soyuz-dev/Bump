@@ -108,6 +108,27 @@ circle.painter = SolidColor(Color(255, 100, 80)) // orange-red
 scene.addEntity(circle)
 ```
 
+### The Fluent Entity Builder
+
+Bump provides `infix` functions for declarative entity creation:
+
+```kotlin
+DefaultGameEntity("ball") at
+    Vector2D(400.0, 300.0) with
+    CircleShape(50.0) with
+    SolidColor(Color(255, 100, 80)) with
+    Collider(CircleShape(50.0)) within
+    scene
+```
+
+**Available chain methods:**
+- `at(position)` — set the entity's world position
+- `with(shape)` — set the entity's shape
+- `with(painter)` — set the entity's painter (color, texture, text)
+- `with(collider)` — set the entity's collider
+- `within(scene)` — add the entity to a scene
+
+
 **Shapes available:**
 - `CircleShape(radius)` — circle
 - `RectangleShape(width, height)` — rectangle
@@ -123,6 +144,42 @@ circle.collider = Collider(circle.shape!!)
 The `Collider(shape)` factory returns the right collider type (`CircleCollider`, `RectangleCollider`, `TriangleCollider`).
 
 ---
+
+## Scene Management
+
+### Creating and Switching Scenes
+
+Scenes hold collections of entities. You can create multiple scenes and switch between them.
+
+```kotlin
+val menuScene = RuntimeScene("menu")
+val gameScene = RuntimeScene("game")
+val pauseScene = RuntimeScene("pause")
+
+// Add entities to each scene
+DefaultGameEntity("play_btn") at
+    Vector2D(400.0, 300.0) with
+    RectangleShape(200.0, 50.0) with
+    SolidColor(Color(60, 120, 200)) within
+    menuScene
+
+// Start with the menu
+engine.loadScene(menuScene)
+
+// Switch scenes at runtime
+engine { dt ->
+    if (startGame) {
+        engine.loadScene(gameScene)
+    }
+    if (paused) {
+        engine.loadScene(pauseScene)
+    }
+}
+```
+
+**Note:** Scenes persist in memory when you switch away from them. Entities are not removed — they stay loaded for instant switching back. If you need to free memory, call `scene.cleanup()` manually on scenes you won't revisit.
+
+
 
 ## Rendering
 

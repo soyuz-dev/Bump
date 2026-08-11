@@ -54,13 +54,13 @@ fun main() {
 
     // --- Scene Setup ---
     val scene = RuntimeScene("av_test")
-    val font = Assets.font("roboto")
+    val font = Assets.font("bahn")
 
     // Cat
-    val cat = DefaultGameEntity("cat")
-    cat.transform = Transform(position = Vector2D(width / 4.0, height / 2.0))
-    cat.shape = RectangleShape(180.0, 180.0)
-    cat.painter = ImagePainter(Assets.texture("cat"))
+    val cat = DefaultGameEntity("cat") at
+            Transform(position = Vector2D(width / 4.0, height / 2.0)) with
+            RectangleShape(180.0, 180.0) with
+            ImagePainter(Assets.texture("cat"))
     cat.interactive = Interactive.clickable(
         containsPoint = { cat.collider?.containsPoint(it, cat.transform) ?: false }
     ) {
@@ -72,10 +72,10 @@ fun main() {
     scene.addEntity(cat)
 
     // Dog
-    val dog = DefaultGameEntity("dog")
-    dog.transform = Transform(position = Vector2D(3 * width / 4.0, height / 2.0))
-    dog.shape = RectangleShape(180.0, 180.0)
-    dog.painter = ImagePainter(Assets.texture("dog"))
+    val dog = DefaultGameEntity("dog") at
+            Transform(position = Vector2D(3 * width / 4.0, height / 2.0)) with
+            RectangleShape(180.0, 180.0) with
+            ImagePainter(Assets.texture("dog"))
     dog.interactive = Interactive.clickable(
         containsPoint = { dog.collider?.containsPoint(it, dog.transform) ?: false }
     ) {

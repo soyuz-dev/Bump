@@ -14,6 +14,7 @@ interface PhysicsBody {
     fun integrateVelocity(dt: Double, newAcceleration: Vector2D? = null) = Unit
     fun addField(field: ForceField) = Unit
     fun removeField(field: ForceField) = Unit
+
 }
 
 infix fun <T : PhysicsBody> T.with(field: ForceField): T {

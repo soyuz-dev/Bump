@@ -70,10 +70,10 @@ fun main() {
 
     fun makeBall(x: Double, y: Double, vx: Double, vy: Double, mass: Double = 1.0, radius: Double = 10.0, restitution: Double = .5) {
         val id = "ball_${entityCount++}"
-        val ball = DefaultGameEntity(id)
-        ball.position = Vector2D(x, y)
-        ball.shape = CircleShape(radius)
-        ball.painter = SolidColor(Math.random(), Math.random(), Math.random(), 1.0)
+        val ball = DefaultGameEntity(id) at
+                Vector2D(x, y) with
+                CircleShape(radius) with
+                SolidColor(Math.random(), Math.random(), Math.random(), 1.0)
         val body = PointMass(mass = mass, restitution = restitution) with gravity
         body.velocity = Vector2D(vx, vy)
         val collider = Collider(CircleShape(radius))
@@ -88,10 +88,10 @@ fun main() {
 
     fun makeBrick(x: Double, y: Double, vx: Double, vy: Double, w: Double = 40.0, h: Double = 30.0, mass: Double = 1.0, angVel: Double = 0.0, restitution: Double = 0.5) {
         val id = "brick_${entityCount++}"
-        val brick = DefaultGameEntity(id)
-        brick.position = Vector2D(x, y)
-        brick.shape = RectangleShape(w, h)
-        brick.painter = SolidColor(0.8, 0.4, 0.1, 1.0)
+        val brick = DefaultGameEntity(id) at
+                Vector2D(x, y) with
+                RectangleShape(w, h) with
+                SolidColor(0.8, 0.4, 0.1, 1.0)
         val body = (RigidBody(mass = mass, restitution = restitution, friction = 0.4, width = w, height = h)) with
                 gravity
 
@@ -108,10 +108,10 @@ fun main() {
     }
 
     fun createWall(id: String, x: Double, y: Double, w: Double, h: Double) {
-        val wall = DefaultGameEntity(id)
-        wall.position = Vector2D(x, y)
-        wall.shape = RectangleShape(w, h)
-        wall.painter = SolidColor(0.2, 0.2, 0.3, 1.0)
+        val wall = DefaultGameEntity(id) at
+                Vector2D(x, y) with
+                RectangleShape(w, h) with
+                SolidColor(0.2, 0.2, 0.3, 1.0)
         val wallBody = PointMass(mass = 0.0, restitution = 1.0)
         val wallCollider = Collider(RectangleShape(w, h))
         physicsSystem.registerBody(id, wallBody)

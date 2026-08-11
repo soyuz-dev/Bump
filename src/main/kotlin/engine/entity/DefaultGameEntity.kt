@@ -106,6 +106,7 @@ open class DefaultGameEntity(
 
 
     infix fun at(position: Vector2D) = also { this.position = position }
+    infix fun at(transform: Transform) = also { this.transform = transform }
     infix fun with(shape: Shape2D) = also { this.shape = shape }
     infix fun with(painter: Painter) = also { this.painter = painter }
     infix fun within(scene: Scene) = also { scene.addEntity(this) }

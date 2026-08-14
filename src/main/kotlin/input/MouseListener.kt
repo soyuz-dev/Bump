@@ -1,7 +1,5 @@
 package org.soyuz.input
 
-import com.sun.jna.platform.win32.User32
-import com.sun.jna.platform.win32.WinDef
 import org.lwjgl.glfw.GLFW.GLFW_PRESS
 import org.lwjgl.glfw.GLFW.GLFW_RELEASE
 import org.soyuz.util.math.Vector2D

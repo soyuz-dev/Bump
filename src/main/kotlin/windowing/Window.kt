@@ -7,6 +7,7 @@ import org.lwjgl.opengl.GL11
 import org.lwjgl.system.MemoryUtil
 import org.soyuz.input.KeyListener
 import org.soyuz.input.MouseListener
+import org.soyuz.util.Debug
 
 open class Window(
     title: String = "Bump",
@@ -79,7 +80,7 @@ open class Window(
         if (handle == MemoryUtil.NULL) throw RuntimeException("Failed to create window")
 
         glfwMakeContextCurrent(handle)
-        println("Context current: ${glfwGetCurrentContext()}")
+        Debug.log {"Context current: ${glfwGetCurrentContext()}" }
         setupCallbacks()
     }
 

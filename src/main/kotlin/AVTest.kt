@@ -32,7 +32,7 @@ fun main() {
 
     // --- Systems & Engine Setup --//
     val camera = Camera()
-    val window = TransparentWindow(
+    val window = Window(
         title = "Bump - AV Test v4",
         initialWidth = width,
         initialHeight = height
@@ -176,6 +176,6 @@ fun main() {
 
     }
 
-
+    window.setVSync(false)
     Application.run()
 }

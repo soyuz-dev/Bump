@@ -155,4 +155,4 @@ See [IDEAS.md](IDEAS.md) for the chaos board.
 
 ## License
 
-LGPL-3.0
+MPL-2.0

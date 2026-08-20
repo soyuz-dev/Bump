@@ -24,7 +24,7 @@ See [GUIDE.md](GUIDE.md) for a quickstart to using Bump.
 - LGPL-3.0 → MPL-2.0. File-level copyleft. Games built on Bump are not derivatives — engine modifications stay open, game code stays closed.
 
 ### Dependencies Cleanup
-- Removed unused dependencies. The engine now has exactly what it needs: LWJGL, JNA, and nothing else.
+- Removed unused dependencies. The engine now has exactly what it needs: LWJGL only.
 
 ### Infix Sugar
 - `entity at position` — set entity position

@@ -1,6 +1,7 @@
 package org.soyuz.util.math
 
 
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -56,6 +57,27 @@ data class Matrix4f(
     fun toFloatArray(): FloatArray =
         data.copyOf()
 
+    fun transform(vec: Vector3D): Vector3D {
+        val x = vec.x.toFloat()
+        val y = vec.y.toFloat()
+        val z = vec.z.toFloat()
+        val w = 1.0f
+
+        val tx = data[0] * x + data[4] * y + data[8] * z + data[12] * w
+        val ty = data[1] * x + data[5] * y + data[9] * z + data[13] * w
+        val tz = data[2] * x + data[6] * y + data[10] * z + data[14] * w
+        val tw = data[3] * x + data[7] * y + data[11] * z + data[15] * w
+
+        if (abs(tw) > 1e-9f) {
+            return Vector3D(
+                (tx / tw).toDouble(),
+                (ty / tw).toDouble(),
+                (tz / tw).toDouble()
+            )
+        }
+        return Vector3D(tx.toDouble(), ty.toDouble(), tz.toDouble())
+    }
+
 
     companion object {
 
@@ -98,6 +120,8 @@ data class Matrix4f(
         }
     }
 
+
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -108,4 +132,6 @@ data class Matrix4f(
     override fun hashCode(): Int {
         return data.contentHashCode()
     }
+
+
 }

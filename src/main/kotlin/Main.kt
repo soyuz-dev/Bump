@@ -130,10 +130,6 @@ fun main() {
     val trackedBall = makeBall(width / 3.0, height / 2.0, 200.0, -500.0, mass = 0.5, radius = 8.0)
     makeBall(2 * width / 3.0, height / 2.0, -200.0, -300.0, mass = 0.5, radius = 8.0)
 
-    // Camera smoothly follows the tracked ball
-    var cameraX = trackedBall.position.x.toFloat()
-    var cameraY = trackedBall.position.y.toFloat()
-
     engine { dt ->
         if (MouseListener.isMouseJustPressed(window.handle, GLFW_MOUSE_BUTTON_LEFT)) {
             val mPos = MouseListener.getPos(window.handle)

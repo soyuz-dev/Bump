@@ -4,8 +4,9 @@ import org.soyuz.engine.entity.GameEntity
 import org.soyuz.input.Input
 import org.soyuz.util.math.Vector2D
 import org.lwjgl.glfw.GLFW.*
+import org.soyuz.engine.render.Camera
 
-class UISystem (private val input: Input) {
+class UISystem(private val input: Input, private val camera: Camera) {
     private val states = mutableMapOf<String, UIState>()
     private var hoveredId: String? = null
     private var pressedId: String? = null
@@ -18,14 +19,17 @@ class UISystem (private val input: Input) {
     private var lastMousePos = Vector2D.ZERO
 
     fun update(entities: List<GameEntity>) {
-        val mousePos = input.mousePosition
-        val mouseDelta = mousePos - lastMousePos
-        lastMousePos = mousePos
+        // 2. Convert Raw Screen Mouse Position -> World Position
+        val rawMousePos = input.mousePosition
+        val worldMousePos = camera.screenToWorld(rawMousePos)
 
-        // Find topmost interactive entity under cursor
+        val mouseDelta = worldMousePos - lastMousePos
+        lastMousePos = worldMousePos // Store the world position for the next frame's delta
+
+        // Find topmost interactive entity under cursor in WORLD space
         val hit = entities
             .filter { it.interactive != null && it.painter != null }
-            .lastOrNull { it.interactive!!.containsPoint(mousePos) }
+            .lastOrNull { it.interactive!!.containsPoint(worldMousePos) }
 
         // --- Hover ---
         if (hit?.id != hoveredId) {
@@ -50,7 +54,6 @@ class UISystem (private val input: Input) {
         // --- Press ---
         if (input.isMouseJustPressed(GLFW_MOUSE_BUTTON_LEFT)) {
             if (hit != null) {
-                // Focus on press
                 if (hit.id != focusedId) {
                     focusedId?.let { fid ->
                         entities.find { it.id == fid }?.interactive?.onFocusLost()
@@ -64,9 +67,8 @@ class UISystem (private val input: Input) {
                 hit.interactive?.onPress(GLFW_MOUSE_BUTTON_LEFT)
                 states.getOrPut(hit.id) { UIState() }.addPressedButton(GLFW_MOUSE_BUTTON_LEFT)
                 pressedId = hit.id
-                dragStartPos = mousePos
+                dragStartPos = worldMousePos // Start drag in world space
             } else {
-                // Clicked empty space — lose focus
                 focusedId?.let { fid ->
                     entities.find { it.id == fid }?.interactive?.onFocusLost()
                     states[fid]?.isFocused = false
@@ -89,7 +91,8 @@ class UISystem (private val input: Input) {
                     }
                 }
                 if (dragId != null) {
-                    pressed.interactive?.onDrag(mouseDelta, mousePos)
+                    // Send drag updates using world coordinate deltas
+                    pressed.interactive?.onDrag(mouseDelta, worldMousePos)
                 }
             }
         }
@@ -102,11 +105,10 @@ class UISystem (private val input: Input) {
                 states[id]?.removePressedButton(GLFW_MOUSE_BUTTON_LEFT)
             }
 
-            // Click (only if pressed and released on same entity)
+            // Click
             if (pressedId != null && pressedId == hit?.id) {
                 hit?.interactive?.onClick(GLFW_MOUSE_BUTTON_LEFT)
 
-                // Double-click detection
                 val now = glfwGetTime()
                 if (pressedId == lastClickId &&
                     lastClickButton == GLFW_MOUSE_BUTTON_LEFT &&
@@ -120,7 +122,7 @@ class UISystem (private val input: Input) {
 
             // End drag
             if (dragId != null) {
-                entities.find { it.id == dragId }?.interactive?.onDragEnd(GLFW_MOUSE_BUTTON_LEFT, mousePos)
+                entities.find { it.id == dragId }?.interactive?.onDragEnd(GLFW_MOUSE_BUTTON_LEFT, worldMousePos)
                 states[dragId]?.let {
                     it.isDragging = false
                     it.dragButton = -1

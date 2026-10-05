@@ -18,7 +18,7 @@ class RuntimeEngine(
 ) : Engine, Dynamic {
 
     val input = Input(window.handle)
-    private val uiSystem = UISystem(input)
+    private val uiSystem = UISystem(input, camera)
     val ui = UI(uiSystem)
     private val pendingTimers = mutableListOf<Timer>()
 

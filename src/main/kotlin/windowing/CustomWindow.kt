@@ -12,7 +12,6 @@ import org.soyuz.engine.render.Camera
 import org.soyuz.engine.render.Mesh
 import org.soyuz.engine.render.RuntimeRenderSystem
 import org.soyuz.engine.render.SolidColor
-import org.soyuz.engine.render.text.Font
 import org.soyuz.engine.scene.RuntimeScene
 import org.soyuz.engine.shape.CircleShape
 import org.soyuz.engine.shape.RectangleShape
@@ -25,15 +24,29 @@ import org.soyuz.input.MouseListener
 import org.soyuz.util.Assets
 import org.soyuz.util.Color
 import org.soyuz.util.math.Vector2D
+import kotlin.math.ceil
+import kotlin.math.hypot
 
 class CustomWindow(
     title: String,
-    width: Int = 800,
-    height: Int = 600,
+    contentWidth: Int = 800,
+    contentHeight: Int = 600,
     fontName: String = "roboto",
-) : TransparentWindow(title, width, height) {
+) : TransparentWindow(
+    title,
+    // Calculate the diagonal for the backing square window
+    ceil(hypot(contentWidth.toDouble(), contentHeight.toDouble())).toInt(),
+    ceil(hypot(contentWidth.toDouble(), contentHeight.toDouble())).toInt()
+) {
 
-    val font by lazy {Assets.font(fontName)}
+    // Store the backing size to use for centering
+    private val backingSize = ceil(hypot(contentWidth.toDouble(), contentHeight.toDouble())).toInt()
+
+    // Calculate the offsets to center the content inside the larger backing window
+    private val offsetX = (backingSize - contentWidth) / 2.0
+    private val offsetY = (backingSize - contentHeight) / 2.0
+
+    val font by lazy { Assets.font(fontName) }
 
     val engine: RuntimeEngine
     val camera: Camera
@@ -45,13 +58,21 @@ class CustomWindow(
     private var dragStartMouseY = 0.0
 
     init {
-
         println("CustomWindow.init: context=${glfwGetCurrentContext()}")
         GL.createCapabilities()
         camera = Camera()
-        camera.setOrtho(width.toFloat(), height.toFloat())
+
+        // Update the camera to use the new backing size
+        val backingSizeF = backingSize.toFloat()
+        camera.setDimensions(
+            backingWidth = backingSizeF,
+            backingHeight = backingSizeF,
+            contentWidth = contentWidth.toFloat(),
+            contentHeight = contentHeight.toFloat()
+        )
+
         engine = RuntimeEngine(this, physicsSystem = null, camera)
-        engine  {
+        engine {
             if (KeyListener.isKeyJustPressed(handle, GLFW_KEY_ESCAPE)) {
                 engine.quit()
             }
@@ -59,20 +80,20 @@ class CustomWindow(
 
         // Title bar
         val titleBar = DefaultGameEntity("titlebar_$title")
-        titleBar.position = Vector2D(width / 2.0, 15.0)
-        titleBar.shape = RectangleShape(width.toDouble(), 30.0)
+        titleBar.position = Vector2D(offsetX + contentWidth / 2.0, offsetY + 15.0)
+        titleBar.shape = RectangleShape(contentWidth.toDouble(), 30.0)
         titleBar.painter = SolidColor(Color(40, 40, 50))
         scene.addEntity(titleBar)
 
         // Title label
         val titleLabel = engine.ui.label("titlelabel_$title", 10.0, 15.0, title, font, 16f, Color(220, 220, 220))
-        val title_x = (titleLabel.shape as RectangleShape).width/2.0 + 10.0
-        titleLabel.position = Vector2D(title_x, 15.0)
+        val titleX = (titleLabel.shape as RectangleShape).width / 2.0 + 10.0
+        titleLabel.position = Vector2D(offsetX + titleX, offsetY + 15.0)
         scene.addEntity(titleLabel)
 
         // Close button
         val closeBtn = DefaultGameEntity("close_$title")
-        closeBtn.position = Vector2D(width - 20.0, 15.0)
+        closeBtn.position = Vector2D(offsetX + contentWidth - 20.0, offsetY + 15.0)
         closeBtn.shape = CircleShape(10.0)
         closeBtn.painter = SolidColor(Color(220, 60, 60))
         closeBtn.collider = Collider(CircleShape(10.0))
@@ -83,20 +104,19 @@ class CustomWindow(
                 onHoverExit = { closeBtn.painter = SolidColor(Color(220, 60, 60)) }
             )
 
-
         // Body
         val body = DefaultGameEntity("body_$title")
-        body.position = Vector2D(width / 2.0, height / 2.0 + 15.0)
-        body.shape = RectangleShape(width.toDouble(), (height - 30).toDouble())
+        body.position = Vector2D(offsetX + contentWidth / 2.0, offsetY + contentHeight / 2.0 + 15.0)
+        body.shape = RectangleShape(contentWidth.toDouble(), (contentHeight - 30).toDouble())
         body.painter = SolidColor(Color(30, 30, 40, 230))
         scene.addEntity(body)
 
         // Draggable title bar overlay
         val titleDrag = DefaultGameEntity("titledrag_$title")
-        titleDrag.position = Vector2D(width / 2.0, 15.0)
-        titleDrag.shape = RectangleShape(width.toDouble(), 30.0)
+        titleDrag.position = Vector2D(offsetX + contentWidth / 2.0, offsetY + 15.0)
+        titleDrag.shape = RectangleShape(contentWidth.toDouble(), 30.0)
         titleDrag.painter = SolidColor(Color(0, 0, 0, 0))
-        titleDrag.collider = Collider(RectangleShape(width.toDouble(), 30.0))
+        titleDrag.collider = Collider(RectangleShape(contentWidth.toDouble(), 30.0))
         titleDrag.interactive = Interactive { titleDrag.collider!!.containsPoint(it, titleDrag.transform) }
             .draggable(
                 onDragStart = { _, _ ->

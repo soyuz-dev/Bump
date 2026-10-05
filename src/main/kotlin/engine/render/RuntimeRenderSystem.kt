@@ -2,7 +2,6 @@ package org.soyuz.engine.render
 
 import org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT
 import org.lwjgl.opengl.GL11.glClear
-import org.lwjgl.opengl.GL11.glClearColor
 import org.soyuz.engine.scene.Scene
 import org.soyuz.engine.shape.CircleShape
 import org.soyuz.engine.shape.RectangleShape
@@ -27,7 +26,7 @@ class RuntimeRenderSystem(
         glClear(GL_COLOR_BUFFER_BIT)
 
         shader.bind()
-        shader.setProjection(camera.getProjection())
+        shader.setProjection(camera.getViewProjection())
 
         for (entity in scene.allEntities()) {
             when (entity.shape) {

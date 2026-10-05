@@ -100,4 +100,8 @@ class Camera {
     }
 
     fun getViewProjection(): FloatArray = viewProjection.toFloatArray()
+
+    fun lookAt(x: Float, y: Float) {
+        setPosition(-x + backingWidth / 2f, -y + backingHeight / 2f)
+    }
 }

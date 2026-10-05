@@ -23,8 +23,8 @@ import org.soyuz.engine.shape.RectangleShape
 import org.soyuz.engine.ui.Interactive
 import org.soyuz.input.MouseListener
 import org.soyuz.util.Assets
+import org.soyuz.util.math.Easing
 import org.soyuz.util.math.Vector2D
-import org.soyuz.windowing.TransparentWindow
 import kotlin.math.roundToInt
 
 fun main() {
@@ -37,7 +37,7 @@ fun main() {
     val physicsSystem = RuntimePhysicsSystem(collisionSystem, eventBus)
 
     val window = Window(
-        title = "Bump - BrickPit",
+        title = "Bump - BrickPit (Camera Follow)",
         initialWidth = width,
         initialHeight = height,
     )
@@ -54,10 +54,9 @@ fun main() {
 
     val sound = AudioSource()
 
-
     fun callback(collisionEvent: CollisionEvent) {
-        if(collisionEvent.type != CollisionEventType.ENTER) return
-        if(collisionEvent.sourceEntityId.startsWith("wall") && collisionEvent.otherEntityId.startsWith("wall")) return
+        if (collisionEvent.type != CollisionEventType.ENTER) return
+        if (collisionEvent.sourceEntityId.startsWith("wall") && collisionEvent.otherEntityId.startsWith("wall")) return
         println("Bump! ${collisionEvent.sourceEntityId} hit ${collisionEvent.otherEntityId}")
         sound.play(Assets.audio("click"))
     }
@@ -68,7 +67,7 @@ fun main() {
     val gravity = ConstantAccelerationField(Vector2D(0.0, 981.0))
     var entityCount = 0
 
-    fun makeBall(x: Double, y: Double, vx: Double, vy: Double, mass: Double = 1.0, radius: Double = 10.0, restitution: Double = .5) {
+    fun makeBall(x: Double, y: Double, vx: Double, vy: Double, mass: Double = 1.0, radius: Double = 10.0, restitution: Double = .5): DefaultGameEntity {
         val id = "ball_${entityCount++}"
         val ball = DefaultGameEntity(id) at
                 Vector2D(x, y) with
@@ -84,9 +83,10 @@ fun main() {
         physicsSystem.registerBody(id, body)
         collisionSystem.registerCollider(id, collider)
         scene.addEntity(ball)
+        return ball
     }
 
-    fun makeBrick(x: Double, y: Double, vx: Double, vy: Double, w: Double = 40.0, h: Double = 30.0, mass: Double = 1.0, angVel: Double = 0.0, restitution: Double = 0.5) {
+    fun makeBrick(x: Double, y: Double, vx: Double, vy: Double, w: Double = 40.0, h: Double = 30.0, mass: Double = 1.0, angVel: Double = 0.0, restitution: Double = 0.5): DefaultGameEntity {
         val id = "brick_${entityCount++}"
         val brick = DefaultGameEntity(id) at
                 Vector2D(x, y) with
@@ -105,6 +105,7 @@ fun main() {
         physicsSystem.registerBody(id, body)
         collisionSystem.registerCollider(id, collider)
         scene.addEntity(brick)
+        return brick
     }
 
     fun createWall(id: String, x: Double, y: Double, w: Double, h: Double) {
@@ -125,27 +126,35 @@ fun main() {
     createWall("wall_2",     width / 2.0, -wallThickness / 2, width.toDouble(), wallThickness * 1.5)
     createWall("wall_3",  width / 2.0, height + wallThickness / 2, width.toDouble(), wallThickness * 1.5)
 
-    makeBall(width / 3.0, height / 2.0, 200.0, -500.0, mass = 0.5, radius = 8.0)
+    // Camera target — the first ball
+    val trackedBall = makeBall(width / 3.0, height / 2.0, 200.0, -500.0, mass = 0.5, radius = 8.0)
     makeBall(2 * width / 3.0, height / 2.0, -200.0, -300.0, mass = 0.5, radius = 8.0)
 
-    engine {
+    // Camera smoothly follows the tracked ball
+    var cameraX = trackedBall.position.x.toFloat()
+    var cameraY = trackedBall.position.y.toFloat()
+
+    engine { dt ->
         if (MouseListener.isMouseJustPressed(window.handle, GLFW_MOUSE_BUTTON_LEFT)) {
             val mPos = MouseListener.getPos(window.handle)
+            // Convert screen mouse to world space, since the camera may be off-center
+            val worldMouse = camera.screenToWorld(mPos)
             if (Math.random() < 0.5) {
                 val r = 5.0 + Math.random() * 15.0
                 val vx = (Math.random() - 0.5) * 600.0
                 val vy = (Math.random() - 0.5) * 600.0 - 300.0
-                makeBall(mPos.x, mPos.y, vx, vy, mass = 0.5 + Math.random() * 2.0, radius = r)
+                makeBall(worldMouse.x, worldMouse.y, vx, vy, mass = 0.5 + Math.random() * 2.0, radius = r)
             } else {
                 val w = 20.0 + Math.random() * 60.0
                 val h = 15.0 + Math.random() * 40.0
                 val vx = (Math.random() - 0.5) * 400.0
                 val vy = (Math.random() - 0.5) * 400.0 - 200.0
                 val angVel = (Math.random() - 0.5) * 10.0
-                makeBrick(mPos.x, mPos.y, vx, vy, w = w, h = h, mass = 0.5 + Math.random() * 2.0, angVel = angVel)
+                makeBrick(worldMouse.x, worldMouse.y, vx, vy, w = w, h = h, mass = 0.5 + Math.random() * 2.0, angVel = angVel)
             }
         }
-        window.title = "Bump!   Thinguses:$entityCount, fps: ${(1/it).roundToInt()}"
+
+        window.title = "Bump! Thinguses:$entityCount, fps: ${(1/dt).roundToInt()}"
     }
 
     window.setVSync(false)

@@ -11,9 +11,9 @@ Random brain dumps worth revisiting later. No deadlines, no promises.
 - OS window (B): axis-aligned, borderless, transparent background
 - Render A inside B, clip to A's rotated rect via stencil buffer
 - Custom window chrome (title bar, buttons) rendered as entities inside A
-- Needs: `GLFW_DECORATED`, `GLFW_TRANSPARENT_FRAMEBUFFER`, `DwmExtendFrameIntoClientArea`
-- Architecturally supported by `Window`/`WindowRuntime`/`WindowManager` split
 - Custom chrome buttons call `window.quit()`, `window.minimize()`, etc.
+
+**Status:** Rotation works. The backing-square trick, `Camera.setDimensions`, `Camera.screenToWorld`, and world-space UI hit-testing are all in place. **Remaining:** stencil clipping so entities don't bleed into the transparent margins.
 
 ## Physics
 
@@ -31,6 +31,9 @@ Glue two bodies together at a fixed relative offset. Zero degrees of freedom. Us
 
 ### Soft body / jelly physics
 Mesh of `PointMass` instances connected by `SpringJoint`s. Deforms on collision. Satisfying squish.
+
+### Barnes-Hut-like gravity
+Replace O(n²) pairwise force calculations with a quadtree. Center-of-mass approximation for distant clusters. O(n log n). The bit-hack exponent check still applies at the tree node level. Could also add a mass-weighted opening criterion (`m*s/d³ < theta`) to bound tidal error rather than geometric error.
 
 ---
 
@@ -53,6 +56,9 @@ Entities sorted by layer before drawing. Background, game, foreground, UI. Preve
 
 ### Sprite sheet / animation
 `AnimatedPainter` that cycles through UV regions of a texture atlas. Frame-based or time-based animation.
+
+### Stencil clipping
+Clip rendering to a rotated rectangle. Required for rotatable windows to prevent entities from bleeding into transparent margins.
 
 ---
 
@@ -110,10 +116,16 @@ Formalize the observable entity pattern into a `Binding<T>` system. `label.posit
 Physics step runs on a worker thread while main thread handles GLFW events + rendering. Avoids visual pause during window drag/resize on Windows. Requires double-buffered scene state.
 
 ### Headless mode
-Run without a window for unit testing physics, AI, or server-side simulation. No GLFW dependency.
+Run without a window for unit testing physics, AI, or server-side simulation. No GLFW dependency. Foundation for Bump Video — headless rendering + FFmpeg encoding for programmatic video generation.
+
+### Bump Video (separate repo/module)
+Headless rendering + JavaCV/FFmpeg. Declarative video authoring built on Bump's entity system, timers, and `Easing`. Mobject-style animation primitives (`play()`, `fadeIn()`, `moveTo()`, `rotate()`).
 
 ### WebAssembly target
 Kotlin/Wasm + WebGL. Bump in the browser. Long-term fever dream.
+
+### 3D rendering (2.0-alpha)
+The math foundation is in place: `Vector3D`, `Quaternion`, `Matrix4f.transform`. Remaining: perspective projection, mesh loading (OBJ/glTF), depth buffer, lighting models, GJK/EPA collision, BVH spatial partitioning.
 
 ---
 
@@ -122,7 +134,6 @@ Kotlin/Wasm + WebGL. Bump in the browser. Long-term fever dream.
 - [x] Circle + Rectangle colliders with SAT
 - [x] Triangle collider with SAT and barycentric point test
 - [x] Force fields attached to bodies
-- [x] Kinematic body type
 - [x] Per-window input with window-handle-keyed state
 - [x] Transform with local↔world helpers
 - [x] Shader-based rendering (core profile)
@@ -163,3 +174,13 @@ Kotlin/Wasm + WebGL. Bump in the browser. Long-term fever dream.
 - [x] Engine-scoped dependencies (UISystem, UI, Input per-engine)
 - [x] Deferred timer registration (pendingTimers pattern)
 - [x] Interactive { } invoke shorthand
+- [x] Transparent windows with custom chrome
+- [x] Multi-window transparency
+- [x] JitPack distribution
+- [x] Scene switching (persistent scenes)
+- [x] MPL-2.0 license
+- [x] Vector3D, Quaternion, Matrix4f 3D transforms
+- [x] Camera.setDimensions (backing vs content)
+- [x] Camera.screenToWorld (full transform inversion)
+- [x] World-space UI hit-testing
+- [x] **Rotatable windows** — content rotates freely while maintaining correct mouse input

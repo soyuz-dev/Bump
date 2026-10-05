@@ -13,7 +13,7 @@ A quickstart guide to building things with Bump. For architecture details and de
 8. [UI System](#ui-system)
 9. [Audio](#audio)
 10. [Timers & Game Loop](#timers--game-loop)
-11. [Windowing](windowing)
+11. [Windowing](#windowing)
 12. [Camera & Screen Effects](#camera--screen-effects)
 13. [Observable Entities](#observable-entities)
 14. [Where Files Go](#where-files-go)
@@ -46,7 +46,7 @@ val lwjglNatives = when {
 }
 
 dependencies {
-    implementation("com.github.soyuz-dev:Bump:v1.3-alpha")
+    implementation("com.github.soyuz-dev:Bump:v1.5-alpha")
     
     // LWJGL natives (required — platform-specific binaries)
     runtimeOnly("org.lwjgl:lwjgl::$lwjglNatives")
@@ -129,7 +129,6 @@ DefaultGameEntity("ball") at
 - `with(collider)` — set the entity's collider
 - `within(scene)` — add the entity to a scene
 
-
 **Shapes available:**
 - `CircleShape(radius)` — circle
 - `RectangleShape(width, height)` — rectangle
@@ -145,42 +144,6 @@ circle.collider = Collider(circle.shape!!)
 The `Collider(shape)` factory returns the right collider type (`CircleCollider`, `RectangleCollider`, `TriangleCollider`).
 
 ---
-
-## Scene Management
-
-### Creating and Switching Scenes
-
-Scenes hold collections of entities. You can create multiple scenes and switch between them.
-
-```kotlin
-val menuScene = RuntimeScene("menu")
-val gameScene = RuntimeScene("game")
-val pauseScene = RuntimeScene("pause")
-
-// Add entities to each scene
-DefaultGameEntity("play_btn") at
-    Vector2D(400.0, 300.0) with
-    RectangleShape(200.0, 50.0) with
-    SolidColor(Color(60, 120, 200)) within
-    menuScene
-
-// Start with the menu
-engine.loadScene(menuScene)
-
-// Switch scenes at runtime
-engine { dt ->
-    if (startGame) {
-        engine.loadScene(gameScene)
-    }
-    if (paused) {
-        engine.loadScene(pauseScene)
-    }
-}
-```
-
-**Note:** Scenes persist in memory when you switch away from them. Entities are not removed — they stay loaded for instant switching back. If you need to free memory, call `scene.cleanup()` manually on scenes you won't revisit.
-
-
 
 ## Rendering
 
@@ -211,6 +174,38 @@ Color(255, 128, 0)           // orange
 Color(255, 100, 80, 150)     // semi-transparent
 Color.random()                // random color
 ```
+
+---
+
+## Scene Management
+
+### Creating and Switching Scenes
+
+Scenes hold collections of entities. You can create multiple scenes and switch between them.
+
+```kotlin
+val menuScene = RuntimeScene("menu")
+val gameScene = RuntimeScene("game")
+
+// Add entities to each scene
+DefaultGameEntity("play_btn") at
+    Vector2D(400.0, 300.0) with
+    RectangleShape(200.0, 50.0) with
+    SolidColor(Color(60, 120, 200)) within
+    menuScene
+
+// Start with the menu
+engine.loadScene(menuScene)
+
+// Switch scenes at runtime
+engine { dt ->
+    if (startGame) {
+        engine.loadScene(gameScene)
+    }
+}
+```
+
+**Note:** Scenes persist in memory when you switch away from them. Entities are not removed — they stay loaded for instant switching back. If you need to free memory, call `scene.cleanup()` manually on scenes you won't revisit.
 
 ---
 
@@ -415,17 +410,33 @@ val window = TransparentWindow("Overlay", 400, 300)
 **Note:** On NVIDIA GPUs, transparency requires a control panel setting:
 Vulkan/OpenGL present method → "Prefer native"
 
-### Custom Window (Alpha)
+### Custom Window
+
 ```kotlin
-val window = CustomWindow("My App", 600, 400, font)
+val window = CustomWindow("My App", 600, 400, "roboto")
 window.x = 200; window.y = 200
 window.addEntity(myContentEntity)
 window.show()
 ```
 
-Creates a transparent window with pre-built title bar, close button, and drag-to-move. Content entities are added normally. See `CustomWindowTest.kt` for a full example.
+Creates a transparent window with pre-built title bar, close button, and drag-to-move. Content entities are added normally. The window's `camera` is exposed for full control:
 
-> **Warning:** Custom windows are in alpha. API might change in the next updates. Tested only on Windows with Intel and NVIDIA GPUs, and WSLg. Dynamic resize is not yet supported.
+```kotlin
+// Zoom
+window.camera.setZoom(0.5f)
+
+// Rotate the entire content
+window.camera.setRotation(Math.PI.toFloat() / 4)
+
+// Pan
+window.camera.setPosition(100f, 50f)
+```
+
+The content rotates around its center. The backing window is sized to the diagonal of the content, so corners never clip. Mouse hit-testing works correctly at any rotation.
+
+See `CustomWindowTest.kt` for a full example.
+
+> **Warning:** Custom windows are in alpha. Tested on Windows with Intel and NVIDIA GPUs, and WSLg. Content is not yet stencil-clipped to the rotated rect — entities near the edges may render into the transparent margins.
 
 ### Multiple Windows
 
@@ -447,6 +458,20 @@ Each window has its own engine, scene, and UI system. Input is per-window.
 
 ## Camera & Screen Effects
 
+### Following a Target
+```kotlin
+var cameraX = trackedEntity.position.x.toFloat()
+var cameraY = trackedEntity.position.y.toFloat()
+
+engine { dt ->
+    // Smooth follow
+    cameraX += (trackedEntity.position.x.toFloat() - cameraX) * 0.1f
+    cameraY += (trackedEntity.position.y.toFloat() - cameraY) * 0.1f
+    camera.lookAt(cameraX, cameraY)
+}
+```
+`lookAt(x, y)` points the camera at a world position. The math to convert that to screen-relative offset is handled internally. Use `camera.setPosition(...)` directly only when you need raw control (e.g., camera shake).
+
 ### Camera Shake
 ```kotlin
 engine.during(500.0) { progress ->
@@ -467,9 +492,13 @@ camera.setZoom(0.5f)   // zoom in (magnify)
 camera.zoom(1.1f)       // multiply current zoom by 1.1
 ```
 
-The camera centers zoom on the middle of the view. Camera movement and zoom are handled independently. Zoom changes the visible world area, while position changes the center point being viewed.
+### Rotation
+```kotlin
+camera.setRotation(Math.PI.toFloat() / 4)  // rotate 45 degrees
+camera.setRotation(0f)                      // reset
+```
 
-UI elements are rendered in screen space and are unaffected by camera movement or zoom.
+Rotation is centered on the content. Mouse hit-testing converts screen coordinates to world coordinates via `camera.screenToWorld()`, so UI interactions work correctly under any rotation.
 
 ### Easing Functions
 Use the `Easing` library for smooth animations:
@@ -524,54 +553,47 @@ OpenGL functions must be called when a window's context is active. If you get th
 ### Window opens but nothing renders
 - Did you add entities to the scene? `scene.addEntity(entity)`
 - Did you call `engine.loadScene(scene)` before `Application.run()`?
-- Are your entities positioned within the visible area? The default ortho maps `(0,0)` top-left to `(width, height)` bottom-right.
+- Are your entities positioned within the visible area?
 
 ### Entity doesn't move with physics
 - Did you register the body? `physicsSystem.registerBody(entity.id, body)`
 - Did you register the collider? `collisionSystem.registerCollider(entity.id, collider)`
 - Is the mass zero? `mass = 0.0` means infinite mass — the body won't move.
-- Did you add forces? Bodies need force fields to accelerate (gravity, thrust, etc.).
+- Did you add forces? Bodies need force fields to accelerate.
 
 ### Collision detection isn't working
 - Both entities must have colliders registered with the `CollisionSystem`.
 - Both entities must have bodies registered with the `PhysicsSystem`.
-- Are the entities actually overlapping? Check positions and shape sizes.
-- Collisions only fire `ENTER` once per contact. Check `CollisionEventType.ENTER`.
+- Collisions only fire `ENTER` once per contact.
 
 ### Text doesn't appear
-- Is `GL_BLEND` enabled? The engine does this automatically via `Window.init()`.
+- Is `GL_BLEND` enabled? The engine does this automatically.
 - Did you call `textPainter.update(0f)` after setting text? UI factory methods handle this.
 - Is the font loaded? Check `Assets.font("name")` matches the file in `resources/fonts/`.
 
 ### Audio doesn't play
 - Did you call `Application.init()`? This initializes `AudioSystem`.
 - Are your audio files OGG format? WAV is not supported.
-- Check the file path: `Assets.audio("meow")` loads `/audio/meow.ogg`.
 - On WSL2: Set `export PULSE_SERVER=unix:/mnt/wslg/PulseServer`.
 
 ### Timer callbacks not firing
-- Timers added during a timer callback (e.g., `after` inside `everyFrame`) are deferred to the next frame. This prevents concurrent modification.
-- `everyFrame` / `engine { }` must be called during setup, not inside another timer callback.
-
-### Window resize makes things disappear
-- The camera's `setOrtho` is called automatically on resize. If you're using `camera.setPosition()` for shake, the offset is correctly converted to NDC internally.
+- Timers added during a timer callback are deferred to the next frame.
+- `everyFrame` / `engine { }` must be called during setup.
 
 ### Multi-window textures/shaders appear white
-- Each window needs its own OpenGL context. `Assets` handles this automatically — just use `Assets.shader("default")` and it caches per-context.
-- Don't share `Shader` or `Texture` objects between engines. Let `Assets` manage them.
+- Each window needs its own OpenGL context. `Assets` handles this automatically.
+- Don't share `Shader` or `Texture` objects between engines.
 
 ### Key presses not detected
 - Input is per-window. Use `engine.input.isKeyDown(key)` or `KeyListener.isKeyDown(window.handle, key)`.
-- GLFW key codes: `GLFW_KEY_SPACE`, `GLFW_KEY_ESCAPE`, `GLFW_KEY_LEFT`, etc. Import `org.lwjgl.glfw.GLFW.*`.
-- Some key combinations don't work due to keyboard ghosting (hardware limitation). Try different key combinations.
-
-### Massive FPS drop when many entities are on screen
-- The collision broadphase uses bounding circles. If entities are clustered, narrowphase SAT still runs on all pairs that pass the circle check. For 100+ entities, consider spreading them out.
-- Text re-rasterization is expensive. Don't update `TextPainter.text` every frame unless needed.
+- Some key combinations don't work due to keyboard ghosting.
 
 ### Transparent window appears opaque on NVIDIA
-- Open NVIDIA Control Panel → 3D Settings → Vulkan/OpenGL present method → set to "Prefer native"
-- This is a known NVIDIA driver default. Intel GPUs work out of the box.
+- Open NVIDIA Control Panel → 3D Settings → Vulkan/OpenGL present method → set to "Prefer native".
+
+### Custom window clicks don't register after rotation
+- Make sure `UISystem` is using `camera.screenToWorld()` for hit-testing. The default `RuntimeEngine` setup does this automatically.
+- If entities are added in the wrong z-order, the close button may be covered by the title bar drag overlay. Add the close button last.
 
 ---
 
@@ -585,26 +607,23 @@ Bump uses the file extension to decide how to load a file. If the bytes inside d
 
 ### Textures (`/textures/`)
 - **Expected:** PNG format
-- **What happens if wrong:** `Texture.fromResource()` uses STB Image, which detects the actual format from the file header. A `.png` file that's actually a JPEG will fail with "Failed to load texture."
-- **Fix:** Open the file in an image editor and re-export as PNG. Don't just rename `.jpg` to `.png`.
+- **What happens if wrong:** STB Image detects the actual format from the file header. A `.png` file that's actually a JPEG will fail with "Failed to load texture."
+- **Fix:** Re-export as PNG. Don't just rename `.jpg` to `.png`.
 
 ### Fonts (`/fonts/`)
 - **Expected:** TrueType (`.ttf`)
-- **What happens if wrong:** `Font` uses STB TrueType, which expects TTF format. An OpenType `.otf` file renamed to `.ttf` may fail silently — the font loads but glyphs render as boxes or nothing.
+- **What happens if wrong:** STB TrueType expects TTF format. An OpenType `.otf` renamed to `.ttf` may fail silently.
 - **Fix:** Use actual TrueType fonts. Google Fonts lets you download TTF specifically.
 
 ### Audio (`/audio/`)
 - **Expected:** OGG Vorbis (`.ogg`)
-- **What happens if wrong:** `AudioClip.fromResource()` uses STB Vorbis. A `.ogg` file that's actually a different codec (Opus, FLAC, or just a renamed WAV/MP3) will either:
-    - Crash with "Failed to decode OGG"
-    - Play garbage (static, screeching)
-    - Play nothing
-- **Fix:** Convert your audio to OGG Vorbis using a tool like Audacity, ffmpeg, or an online converter. Renaming `.wav` to `.ogg` will **not** work.
+- **What happens if wrong:** STB Vorbis will crash, play garbage, or play nothing if the codec doesn't match.
+- **Fix:** Convert to OGG Vorbis using Audacity, ffmpeg, or an online converter. Renaming `.wav` to `.ogg` will **not** work.
 
 ### Shaders (`/shaders/`)
 - **Expected:** GLSL 330 core (`.vert`, `.frag`)
-- **What happens if wrong:** The shader compiles but renders black/white or crashes the GPU driver. If you see solid colors where textures should be, check the shader's `uUseTexture` uniform.
-- **Fix:** Make sure your shaders declare `#version 330 core` and match the engine's uniform names (`uProjection`, `uModel`, `uColor`, `uTexture`, `uUseTexture`).
+- **What happens if wrong:** Shader compiles but renders black/white or crashes the GPU driver.
+- **Fix:** Shaders must declare `#version 330 core` and match the engine's uniform names (`uProjection`, `uModel`, `uColor`, `uTexture`, `uUseTexture`).
 
 ### How to check what a file actually is
 
@@ -632,23 +651,28 @@ hexdump -C file.ogg | head -1
 
 ## Quick Reference
 
-| Task               | Code                                                     |
-|--------------------|----------------------------------------------------------|
-| Create entity      | `DefaultGameEntity("id")`                                |
-| Set position       | `entity.position = Vector2D(x, y)`                       |
-| Set shape          | `entity.shape = CircleShape(r)`                          |
-| Set color          | `entity.painter = SolidColor(Color(r,g,b))`              |
-| Add collider       | `entity.collider = Collider(shape)`                      |
-| Add physics        | `body = PointMass(mass) with gravity`                    |
-| Register physics   | `physicsSystem.registerBody(id, body)`                   |
-| Register collider  | `collisionSystem.registerCollider(id, collider)`         |
-| Add to scene       | `scene.addEntity(entity)`                                |
-| Load font          | `Assets.font("roboto")`                                  |
-| Load texture       | `Assets.texture("cat")`                                  |
-| Load audio         | `Assets.audio("meow")`                                   |
-| Every frame        | `engine { dt -> ... }`                                   |
-| After delay        | `engine.after(ms) { ... }`                               |
-| Make button        | `engine.ui.button("id", x, y, w, h) { ... }`             |
-| Make label         | `engine.ui.label("id", x, y, "text", font, size, color)` |
-| Transparent window | `TransparentWindow("title", w, h)`                       |
-| Custom window      | `CustomWindow("title", w, h, font)`                      |
+| Task               | Code                                                                      |
+|--------------------|---------------------------------------------------------------------------|
+| Create entity      | `DefaultGameEntity("id")`                                                 |
+| Set position       | `entity.position = Vector2D(x, y)`                                        |
+| Set shape          | `entity.shape = CircleShape(r)`                                           |
+| Set color          | `entity.painter = SolidColor(Color(r,g,b))`                               |
+| Add collider       | `entity.collider = Collider(shape)`                                       |
+| Add physics        | `body = PointMass(mass) with gravity`                                     |
+| Register physics   | `physicsSystem.registerBody(id, body)`                                    |
+| Register collider  | `collisionSystem.registerCollider(id, collider)`                          |
+| Add to scene       | `scene.addEntity(entity)`                                                 |
+| Fluent entity      | `Entity("id") at pos with shape with painter within scene`                |
+| Load font          | `Assets.font("roboto")`                                                   |
+| Load texture       | `Assets.texture("cat")`                                                   |
+| Load audio         | `Assets.audio("meow")`                                                    |
+| Every frame        | `engine { dt -> ... }`                                                    |
+| After delay        | `engine.after(ms) { ... }`                                                |
+| Switch scene       | `engine.loadScene(scene)`                                                 |
+| Make button        | `engine.ui.button("id", x, y, w, h) { ... }`                              |
+| Make label         | `engine.ui.label("id", x, y, "text", font, size, color)`                  |
+| Transparent window | `TransparentWindow("title", w, h)`                                        |
+| Custom window      | `CustomWindow("title", w, h, font)`                                       |
+| Rotate window      | `customWindow.camera.setRotation(radians)`                                |
+| Zoom window        | `customWindow.camera.setZoom(scale)`                                      |
+| Follow entity      | `camera.lookAt(target.position.x.toFloat(), target.position.y.toFloat())` |

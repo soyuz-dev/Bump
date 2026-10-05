@@ -180,7 +180,7 @@ Tested on a Lenovo Yoga L13 Gen 2 (integrated graphics, passive cooling):
 - 50-body n-body simulation with CCD and per-pair gravity: 2000 FPS without vsync, fans off
 - Desktop (dedicated GPU): brickpit at 3,000+ FPS
 - Transparent window with UI: 3,700 FPS on integrated graphics
-- Rotated custom window with UI: smooth 60+ FPS
+- Rotated custom window with UI: smooth 700+ FPS
 - Idle (AV test with UI): 4% CPU, 120MB RAM
 - All tests with IntelliJ and Chrome running in the background
 

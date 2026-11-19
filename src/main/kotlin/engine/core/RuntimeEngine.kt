@@ -93,11 +93,17 @@ class RuntimeEngine(
 
     private var physicsAccumulator = 0.0
 
+
     override fun update(dt: Float) {
         if (!running || dt <= 0f || !dt.isFinite()) return
         val scene = currentScene ?: return
 
+        scene.dispatchInput(input, dt.toDouble())
+
+        if (!running || currentScene !== scene) return
+
         physicsAccumulator += dt.toDouble()
+
         while (physicsAccumulator >= DEFAULT_PHYSICS_TIMESTEP) {
             physicsSystem?.step(scene, DEFAULT_PHYSICS_TIMESTEP)
             physicsAccumulator -= DEFAULT_PHYSICS_TIMESTEP

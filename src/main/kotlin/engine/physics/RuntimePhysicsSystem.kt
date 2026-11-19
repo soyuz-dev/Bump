@@ -213,33 +213,51 @@ class RuntimePhysicsSystem(
             entityB.transform = entityB.transform.translated(correction * invMassB)
         }
 
-        // Phase 4.5: Publish contacts to the event bus
-        val currentContacts = mutableSetOf<Pair<String, String>>().apply { addAll(ccdContacts) }
 
-        for (pair in ccdContacts) {
-            if (pair !in previousContacts) {
-                eventBus.publish(CollisionEvent(pair.first, pair.second, CollisionEventType.ENTER))
-            }
-        }
+// Phase 4.5: Publish collision transitions
+
+        val currentContacts =
+            mutableSetOf<Pair<String, String>>()
+
+        currentContacts.addAll(ccdContacts)
         ccdContacts.clear()
 
         for (contact in contacts) {
-            val pair = if (contact.entityA < contact.entityB) contact.entityA to contact.entityB else contact.entityB to contact.entityA
+            val pair = if (contact.entityA < contact.entityB) {
+                contact.entityA to contact.entityB
+            } else {
+                contact.entityB to contact.entityA
+            }
+
             currentContacts.add(pair)
-
-            if (pair !in previousContacts) {
-                eventBus.publish(CollisionEvent(contact.entityA, contact.entityB, CollisionEventType.ENTER))
-            }
         }
 
-        for (pair in previousContacts) {
-            if (pair !in currentContacts) {
-                eventBus.publish(CollisionEvent(pair.first, pair.second, CollisionEventType.EXIT))
-            }
-        }
+// Determine transitions before publishing callbacks.
+// Callbacks may mutate engine state.
+        val entered = currentContacts - previousContacts
+        val stayed = currentContacts intersect previousContacts
+        val exited = previousContacts - currentContacts
 
         previousContacts.clear()
         previousContacts.addAll(currentContacts)
+
+        for ((a, b) in entered) {
+            eventBus.publish(
+                CollisionEvent(a, b, CollisionEventType.ENTER)
+            )
+        }
+
+        for ((a, b) in stayed) {
+            eventBus.publish(
+                CollisionEvent(a, b, CollisionEventType.STAY)
+            )
+        }
+
+        for ((a, b) in exited) {
+            eventBus.publish(
+                CollisionEvent(a, b, CollisionEventType.EXIT)
+            )
+        }
 
         // Phase 5: Solve strict joints
         for (iter in 0 until 5) {

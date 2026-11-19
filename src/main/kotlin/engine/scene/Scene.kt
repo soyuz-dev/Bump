@@ -3,6 +3,7 @@ package org.soyuz.engine.scene
 
 import org.soyuz.engine.behaviour.Subscription
 import org.soyuz.engine.entity.GameEntity
+import org.soyuz.engine.events.CollisionEvent
 import org.soyuz.input.Input
 
 interface Scene {
@@ -43,4 +44,10 @@ interface Scene {
     fun render(delta: Float, alpha: Float)
 
     fun cleanup()
+
+    fun onCollisionEvent(
+        callback: (CollisionEvent) -> Unit,
+    ): Subscription
+
+    fun dispatchCollisionEvent(event: CollisionEvent)
 }

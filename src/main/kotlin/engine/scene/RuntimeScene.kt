@@ -1,9 +1,14 @@
 
 package org.soyuz.engine.scene
 
+import org.soyuz.engine.behaviour.CallbackSubscription
 import org.soyuz.engine.behaviour.SceneKeyboardDispatcher
 import org.soyuz.engine.behaviour.Subscription
 import org.soyuz.engine.entity.GameEntity
+import org.soyuz.engine.events.CollisionEvent
+import org.soyuz.engine.events.CollisionEventType
+import org.soyuz.engine.events.EventBus
+import org.soyuz.engine.physics.ScenePhysicsContext
 import org.soyuz.input.Input
 
 open class RuntimeScene(
@@ -13,6 +18,21 @@ open class RuntimeScene(
         linkedMapOf()
 
     private val keyboard = SceneKeyboardDispatcher()
+
+    private val collisionCallbacks =
+        mutableListOf<Pair<Subscription, (CollisionEvent) -> Unit>>()
+
+
+    var physicsContext: ScenePhysicsContext? = null
+        private set
+
+    fun attachPhysics(context: ScenePhysicsContext) {
+        check(physicsContext == null) {
+            "Scene '$id' already has a physics context"
+        }
+
+        physicsContext = context
+    }
 
     final override fun addEntity(entity: GameEntity) {
         val previous = entities.put(entity.id, entity)
@@ -88,6 +108,48 @@ open class RuntimeScene(
 
     override fun cleanup() {
         keyboard.clear()
+
+        collisionCallbacks
+            .map { it.first }
+            .forEach { it.cancel() }
+
         entities.clear()
+    }
+
+    override fun onCollisionEvent(
+        callback: (CollisionEvent) -> Unit
+    ): Subscription {
+        val subscription = CallbackSubscription { cancelled ->
+            collisionCallbacks.removeAll {
+                it.first == cancelled
+            }
+        }
+
+        collisionCallbacks += subscription to callback
+
+        return subscription
+    }
+
+    override fun dispatchCollisionEvent(event: CollisionEvent) {
+        val source = findEntity(event.sourceEntityId) ?: return
+        val other = findEntity(event.otherEntityId) ?: return
+
+        for ((subscription, callback) in collisionCallbacks.toList()) {
+            if (subscription.isActive) callback(event)
+        }
+
+        if (event.type != CollisionEventType.ENTER) return
+
+        if (
+            findEntity(source.id) === source &&
+            findEntity(other.id) === other
+        ) source.dispatchCollision(other)
+
+        if (source !== other &&
+            findEntity(source.id) === source &&
+            findEntity(other.id) === other
+        ) {
+            other.dispatchCollision(source)
+        }
     }
 }

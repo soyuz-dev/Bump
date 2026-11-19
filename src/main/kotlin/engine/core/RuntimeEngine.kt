@@ -4,6 +4,7 @@ import org.soyuz.engine.physics.PhysicsSystem
 import org.soyuz.engine.render.Camera
 import org.soyuz.engine.render.RenderSystem
 import org.soyuz.engine.render.Shader
+import org.soyuz.engine.scene.RuntimeScene
 import org.soyuz.engine.scene.Scene
 import org.soyuz.engine.ui.UISystem
 import org.soyuz.engine.ui.UI
@@ -26,6 +27,8 @@ class RuntimeEngine(
     lateinit var shader: Shader
 
     private var currentScene: Scene? = null
+    val activeScene: Scene?
+        get() = currentScene
     private var running = false
     private var renderResourcesCleaned = false
     private val timers = mutableListOf<Timer>()
@@ -105,7 +108,16 @@ class RuntimeEngine(
         physicsAccumulator += dt.toDouble()
 
         while (physicsAccumulator >= DEFAULT_PHYSICS_TIMESTEP) {
-            physicsSystem?.step(scene, DEFAULT_PHYSICS_TIMESTEP)
+            val activePhysicsSystem =
+                (scene as? RuntimeScene)
+                    ?.physicsContext
+                    ?.physicsSystem
+                    ?: physicsSystem
+
+            activePhysicsSystem?.step(
+                scene,
+                DEFAULT_PHYSICS_TIMESTEP
+            )
             physicsAccumulator -= DEFAULT_PHYSICS_TIMESTEP
         }
 

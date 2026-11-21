@@ -18,12 +18,13 @@ The DSL is the easiest way to get started. The imperative API is still available
 10. [Audio](#audio)
 11. [Timers & Game Loop](#timers--game-loop)
 12. [Windowing](#windowing)
-13. [Camera & Screen Effects](#camera--screen-effects)
-14. [Observable Entities](#observable-entities)
-15. [Where Files Go](#where-files-go)
-16. [Common Issues and Quick Fixes](#common-issues-and-quick-fixes)
-17. [File Format Issues](#file-format-issues)
-18. [Quick Reference](#quick-reference)
+13. [DSL Demo Examples](#dsl-demo-examples)
+14. [Camera & Screen Effects](#camera--screen-effects)
+15. [Observable Entities](#observable-entities)
+16. [Where Files Go](#where-files-go)
+17. [Common Issues and Quick Fixes](#common-issues-and-quick-fixes)
+18. [File Format Issues](#file-format-issues)
+19. [Quick Reference](#quick-reference)
 
 ---
 
@@ -531,6 +532,16 @@ sound.stop()
 
 Audio files go in `src/main/resources/audio/`. OGG Vorbis only. `Application.init()` sets up the audio system; `bump {}` takes care of that for you.
 
+An `AudioSource` can also be played from an interaction or timer. For example:
+
+```kotlin
+engine.forEvery(500.0) {
+    AudioSource().play(Assets.audio("click"))
+}
+```
+
+See `AVTestDSL.kt` for audio mixed with click interactions, UI, and camera effects.
+
 On WSL2, audio may require:
 
 ```bash
@@ -570,7 +581,7 @@ engine.during(500.0) { progress ->
 }
 ```
 
-`dt` is in seconds; the timer delay examples above use milliseconds. Coroutine-based `wait(Duration)` behaviour is planned, not part of v1.6-alpha.
+`dt` is in seconds; the timer delay examples above use milliseconds. Coroutine-based `wait(Duration)` behaviour is planned, but not part of v1.6-alpha.
 
 ---
 
@@ -598,10 +609,30 @@ Application.windows.add(window, engine) { /* setup */ }
 
 ### Transparent Window
 
+A transparent window is borderless, with only its rendered content visible. Use the `createWindow` factory to configure it through the DSL:
+
+```kotlin
+bump {
+    window(
+        "Overlay",
+        400,
+        300,
+        createWindow = ::TransparentWindow
+    ) {
+        scene("main") {
+            // ...
+        }
+    }
+}
+```
+
+Or construct it directly through the imperative API:
+
 ```kotlin
 val window = TransparentWindow("Overlay", 400, 300)
-// Window is borderless and transparent — only rendered content is visible
 ```
+
+`createWindow` accepts a function that constructs a `Window` (or subclass) from a title, width, and height. The default is a normal `Window`, so existing DSL programs don't need to change.
 
 **Note:** On NVIDIA GPUs, transparency may require this control panel setting:
 Vulkan/OpenGL present method → "Prefer native"
@@ -644,6 +675,19 @@ bump {
 ```
 
 Each window has its own engine, scene, and UI system. Input is per-window. See `MultiWindowDSL.kt` for a working example.
+
+---
+
+## DSL Demo Examples
+
+The demos are in `org.soyuz`:
+
+- **`MainDsl.kt` (BrickPit):** Physics sandbox with balls and bricks spawned at runtime, dragging, and collision sounds.
+- **`MultiSceneDSL.kt`:** Persistent scenes switched using scene-scoped keyboard callbacks.
+- **`MultiWindowDSL.kt`:** Two separate windows, engines, and animations.
+- **`AVTestDSL.kt`:** Transparent window with clickable cat and dog images, audio, labels, a pulsing circle, timers, and camera shake.
+
+All four DSL demos have been tested successfully as running applications.
 
 ---
 
@@ -704,7 +748,7 @@ engine.during(1000.0) { progress ->
 }
 ```
 
-**Available easings:** `linear`, `quadIn/Out/InOut`, `cubicIn/Out/InOut`, `sinIn/Out/InOut`, `expoIn/Out`, `bounceOut`, `elasticOut`, `backOut`, and more. See `Easing` for the full list.
+**Available easings:** `linear`, `quadIn/Out/InOut`, `cubicIn/Out/InOut`, `sinIn/Out`, `expoIn/Out`, `bounceOut`, `elasticOut`, `backOut`, and more. See `Easing` for the full list.
 
 ---
 
@@ -780,7 +824,7 @@ src/main/resources/
 - Open NVIDIA Control Panel → 3D Settings → Vulkan/OpenGL present method → set to "Prefer native".
 
 ### Rotated custom window has visual artefacts
-- Content is not yet stencil-clipped to the rotated rectangle. Entities near the edges may render into the transparent margins. or may appear visually outside the window
+- Content is not yet stencil-clipped to the rotated rectangle. Entities near the edges may render into the transparent margins or appear visually outside the window.
 
 ---
 
@@ -816,29 +860,30 @@ Bump uses the file extension to decide how to load a file. If the bytes inside d
 
 ## Quick Reference
 
-| Task                | Code                                                     |
-|---------------------|----------------------------------------------------------|
-| Start the DSL       | `bump { ... }`                                           |
-| Create window       | `window("Title", 800, 600) { ... }`                      |
-| Create scene        | `scene("game") { ... }`                                  |
-| Create entity       | `entity("ball") { ... }`                                 |
-| Set position        | `position = Vector2D(x, y)`                              |
-| Set shape           | `shape = CircleShape(r)`                                 |
-| Set colour          | `painter = SolidColor(Color(r, g, b))`                   |
-| Add physics in DSL  | `physics { body = ...; collider = ... }`                 |
-| Key press callback  | `onKeyDown(key) { ... }`                                 |
-| Key held callback   | `onKeyHeld(key) { dt -> ... }`                           |
-| Collision events    | `onCollisionEvent { event -> ... }`                      |
-| Cancel subscription | `subscription.cancel()`                                  |
-| Switch scene        | `engine.loadScene(scene)`                                |
-| Every frame         | `engine { dt -> ... }`                                   |
-| After delay         | `engine.after(ms) { ... }`                               |
-| Load font           | `Assets.font("roboto")`                                  |
-| Load texture        | `Assets.texture("cat")`                                  |
-| Load audio          | `Assets.audio("meow")`                                   |
-| Make button         | `engine.ui.button("id", x, y, w, h) { ... }`             |
-| Make label          | `engine.ui.label("id", x, y, "text", font, size, color)` |
-| Transparent window  | `TransparentWindow("title", w, h)`                       |
-| Custom window       | `CustomWindow("title", w, h, font)`                      |
-| Rotate window       | `customWindow.camera.setRotation(radians)`               |
-| Set Camera Position | `camera.lookAt(x, y)`                                    |
+| Task                  | Code                                                                |
+|-----------------------|---------------------------------------------------------------------|
+| Start the DSL         | `bump { ... }`                                                      |
+| Create window         | `window("Title", 800, 600) { ... }`                                 |
+| Custom window factory | `window("Title", w, h, createWindow = ::TransparentWindow) { ... }` |
+| Create scene          | `scene("game") { ... }`                                             |
+| Create entity         | `entity("ball") { ... }`                                            |
+| Set position          | `position = Vector2D(x, y)`                                         |
+| Set shape             | `shape = CircleShape(r)`                                            |
+| Set colour            | `painter = SolidColor(Color(r, g, b))`                              |
+| Add physics in DSL    | `physics { body = ...; collider = ... }`                            |
+| Key press callback    | `onKeyDown(key) { ... }`                                            |
+| Key held callback     | `onKeyHeld(key) { dt -> ... }`                                      |
+| Collision events      | `onCollisionEvent { event -> ... }`                                 |
+| Cancel subscription   | `subscription.cancel()`                                             |
+| Switch scene          | `engine.loadScene(scene)`                                           |
+| Every frame           | `engine { dt -> ... }`                                              |
+| After delay           | `engine.after(ms) { ... }`                                          |
+| Load font             | `Assets.font("roboto")`                                             |
+| Load texture          | `Assets.texture("cat")`                                             |
+| Load audio            | `Assets.audio("meow")`                                              |
+| Make button           | `engine.ui.button("id", x, y, w, h) { ... }`                        |
+| Make label            | `engine.ui.label("id", x, y, "text", font, size, color)`            |
+| Transparent window    | `TransparentWindow("title", w, h)`                                  |
+| Custom window         | `CustomWindow("title", w, h, font)`                                 |
+| Rotate window         | `customWindow.camera.setRotation(radians)`                          |
+| Set Camera Position   | `camera.lookAt(x, y)`                                               |

@@ -1,3 +1,4 @@
+
 # Bump v1.6-alpha
 
 [![](https://jitpack.io/v/soyuz-dev/Bump.svg)](https://jitpack.io/#soyuz-dev/Bump)\
@@ -48,6 +49,7 @@ The Kotlin DSL is here. Windows, scenes, entities, physics, and behaviours can n
 
 - `bump { ... }` — initializes and runs the application.
 - `window("Title", width, height) { ... }` — creates a window, engine, camera, and rendering infrastructure.
+- `createWindow = ::TransparentWindow` — use a `Window` subclass without manually setting up its engine.
 - `scene("id") { ... }` — creates a persistent scene with its own physics context.
 - `entity("id") { ... }` — configures entities with position, rotation, shape, painter, collider, and physics body.
 - `physics { ... }` — registers a physics body and collider without manually accessing the physics and collision systems.
@@ -84,6 +86,27 @@ scene("game") {
 }
 ```
 
+### Window Factories
+
+The DSL no longer assumes every window is a regular GLFW window. Pass a constructor reference through `createWindow` to use a `Window` subclass:
+
+```kotlin
+bump {
+    window(
+        "Transparent!",
+        800,
+        600,
+        createWindow = ::TransparentWindow
+    ) {
+        scene("main") {
+            // ...
+        }
+    }
+}
+```
+
+The default is still `Window`. Transparent and other custom window types use the same engine and render setup.
+
 ### Scene-Aware Physics
 
 - Each scene now has its own `ScenePhysicsContext`, containing its physics system, collision system, and event bus.
@@ -104,13 +127,14 @@ scene("game") {
 
 ### DSL Demos
 
-The DSL has now been tested with three existing demos, rewritten to use it:
+Four existing demos have been rewritten to use the DSL:
 
 - **MainDsl.kt (BrickPit DSL):** Full physics sandbox. Click to spawn balls and bricks. Drag entities. Collision sounds. Now with DSL entity construction, physics registration, and scene collision events.
 - **MultiSceneDSL.kt:** Three persistent scenes with circles, rectangles, and triangles. Scene-scoped keyboard callbacks for switching. No manual `KeyListener` polling.
 - **MultiWindowDSL.kt:** Two independent windows, each with its own engine, scene, and animation loop. Rotating triangle in one, pulsing circle in the other.
+- **AVTestDSL.kt:** Transparent window, clickable cat/dog textures, audio playback, text rendering, timers, pulsing circle, and camera shake.
 
-All three have been run successfully.
+All four have been run successfully.
 
 The DSL is no longer just a bunch of unit tests.
 
@@ -139,7 +163,7 @@ The DSL is no longer just a bunch of unit tests.
 
 - **Application & Windowing:** `Application` object owns GLFW lifecycle and global config. `Window` is a pure GLFW wrapper with mutable properties and recursion-safe callbacks. `TransparentWindow` for borderless transparency. `CustomWindow` for rotated custom chrome. `WindowManager` orchestrates multiple windows.
 - **Engine:** `RuntimeEngine` scopes `UISystem`, `UI` factory, `Input`, timers, and the `Dynamic` update loop. No GLFW knowledge. Fixed-timestep physics.
-- **DSL:** `bump`, `BumpScope`, `WindowScope`, `SceneScope`, `EntityScope`. Declarative configuration of windows, scenes, entities, rendering, physics, and behaviours. Runtime entity creation supported.
+- **DSL:** `bump`, `BumpScope`, `WindowScope`, `SceneScope`, `EntityScope`. Declarative configuration of windows (including custom window factories), scenes, entities, rendering, physics, and behaviours. Runtime entity creation supported.
 - **Behaviour API:** Scene-scoped keyboard input, cancellable `Subscription` objects, entity-owned callbacks, collision event routing, and lifecycle cleanup.
 - **Rendering:** Modern OpenGL 3.3 core profile, shader-based (`Shader`, `Mesh`, `Camera`), `Painter` interface with `SolidColor`, `ImagePainter`, `TextPainter`, `DynamicPainter`. `Camera` supports rotation, zoom, position, and separate backing/content dimensions.
 - **Audio:** OpenAL-based `AudioSystem`, `AudioClip` (OGG via STB Vorbis), `AudioSource` with volume/pitch/looping, spatial audio support
@@ -174,6 +198,7 @@ The DSL is no longer just a bunch of unit tests.
 - **MainDsl.kt (BrickPit DSL):** The same physics sandbox, now using the configuration DSL.
 - **MultiSceneDSL.kt:** Three persistent scenes with scene-scoped input.
 - **MultiWindowDSL.kt:** Two independent windows using the DSL.
+- **AVTestDSL.kt:** Transparent multimedia demo with the DSL — clickable cat and dog textures, audio, text, timers, and camera shake.
 - **AVTest.kt:** Multimedia demo — cat/dog sounds, FPS, title text, pulsing circle, play button with camera shake.
 - **DragTest.kt:** UI — draggable panel, circle hover, slider, text input.
 - **TriangleTest.kt:** Triangle rendering and collision.
@@ -207,6 +232,7 @@ The DSL demos are in `org.soyuz`, with entry points such as:
 - `org.soyuz.MainDslKt`
 - `org.soyuz.MultiSceneDSLKt`
 - `org.soyuz.MultiWindowDSLKt`
+- `org.soyuz.AVTestDSLKt`
 
 Or build a fat jar:
 
@@ -221,8 +247,8 @@ Add JitPack to your `settings.gradle.kts`:
 
 ```kotlin
 repositories {
-    mavenCentral()
-    maven { url = uri("https://jitpack.io") }
+  mavenCentral()
+  maven { url = uri("https://jitpack.io") }
 }
 ```
 
@@ -230,16 +256,15 @@ Add Bump to your `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation("com.github.soyuz-dev:Bump:v1.6-alpha")
-    runtimeOnly("org.lwjgl:lwjgl::$lwjglNatives")
-    runtimeOnly("org.lwjgl:lwjgl-glfw::$lwjglNatives")
-    runtimeOnly("org.lwjgl:lwjgl-opengl::$lwjglNatives")
-    runtimeOnly("org.lwjgl:lwjgl-stb::$lwjglNatives")
-    runtimeOnly("org.lwjgl:lwjgl-openal::$lwjglNatives")
+  implementation("com.github.soyuz-dev:Bump:v1.6-alpha")
+  runtimeOnly("org.lwjgl:lwjgl::$lwjglNatives")
+  runtimeOnly("org.lwjgl:lwjgl-glfw::$lwjglNatives")
+  runtimeOnly("org.lwjgl:lwjgl-opengl::$lwjglNatives")
+  runtimeOnly("org.lwjgl:lwjgl-stb::$lwjglNatives")
+  runtimeOnly("org.lwjgl:lwjgl-openal::$lwjglNatives")
 }
 ```
 
-The v1.6-alpha tag must be published and built by JitPack before these coordinates can resolve.
 
 ## Architecture
 

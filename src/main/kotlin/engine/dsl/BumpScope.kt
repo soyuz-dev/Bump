@@ -19,11 +19,12 @@ class BumpScope internal constructor() {
         title: String = "Bump",
         width: Int = 800,
         height: Int = 600,
+        createWindow: (String, Int, Int) -> Window = ::Window,
         configure: WindowScope.() -> Unit
     ): Window  {
         require(width > 0 && height > 0) { "Window dimensions should be positive" }
 
-        val window = Window(title, width, height)
+        val window = createWindow(title, width, height)
         val camera = Camera()
         val eventBus = RuntimeEventBus()
         val collisionSystem = RuntimeCollisionSystem()

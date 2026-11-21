@@ -1,6 +1,9 @@
+
 # Bump — User Guide
 
 A quickstart guide to building things with Bump. For architecture details and design philosophy, see [README.md](README.md).
+
+The DSL is the easiest way to get started. The imperative API is still available when you want direct control.
 
 ## Table of Contents
 1. [Installation](#installation)
@@ -10,16 +13,17 @@ A quickstart guide to building things with Bump. For architecture details and de
 5. [Scene Management](#scene-management)
 6. [Physics](#physics)
 7. [Joints](#joints)
-8. [UI System](#ui-system)
-9. [Audio](#audio)
-10. [Timers & Game Loop](#timers--game-loop)
-11. [Windowing](#windowing)
-12. [Camera & Screen Effects](#camera--screen-effects)
-13. [Observable Entities](#observable-entities)
-14. [Where Files Go](#where-files-go)
-15. [Common Issues and Quick Fixes](#common-issues-and-quick-fixes)
-16. [File Format Issues](#file-format-issues)
-17. [Quick Reference](#quick-reference)
+8. [Input & Behaviours](#input--behaviours)
+9. [UI System](#ui-system)
+10. [Audio](#audio)
+11. [Timers & Game Loop](#timers--game-loop)
+12. [Windowing](#windowing)
+13. [Camera & Screen Effects](#camera--screen-effects)
+14. [Observable Entities](#observable-entities)
+15. [Where Files Go](#where-files-go)
+16. [Common Issues and Quick Fixes](#common-issues-and-quick-fixes)
+17. [File Format Issues](#file-format-issues)
+18. [Quick Reference](#quick-reference)
 
 ---
 
@@ -27,7 +31,8 @@ A quickstart guide to building things with Bump. For architecture details and de
 
 ### As a Dependency (JitPack)
 
-Add JitPack to your `settings.gradle.kts`:
+Add JitPack to your `settings.gradle.kts` under `dependencyResolutionManagement.repositories` (or your project's equivalent repository configuration):
+
 ```kotlin
 repositories {
     mavenCentral()
@@ -35,9 +40,9 @@ repositories {
 }
 ```
 
-Add Bump and LWJGL natives to your `build.gradle.kts`:
+Add Bump and the LWJGL natives to your `build.gradle.kts`:
+
 ```kotlin
-val lwjglV = "3.3.3"
 val lwjglNatives = when {
     System.getProperty("os.name").contains("Windows") -> "natives-windows"
     System.getProperty("os.name").contains("Linux") -> "natives-linux"
@@ -46,9 +51,8 @@ val lwjglNatives = when {
 }
 
 dependencies {
-    implementation("com.github.soyuz-dev:Bump:v1.5-alpha")
-    
-    // LWJGL natives (required — platform-specific binaries)
+    implementation("com.github.soyuz-dev:Bump:v1.6-alpha")
+
     runtimeOnly("org.lwjgl:lwjgl::$lwjglNatives")
     runtimeOnly("org.lwjgl:lwjgl-glfw::$lwjglNatives")
     runtimeOnly("org.lwjgl:lwjgl-opengl::$lwjglNatives")
@@ -57,16 +61,47 @@ dependencies {
 }
 ```
 
+The `v1.6-alpha` dependency will resolve once the Git tag has been published and built by JitPack. Match your other LWJGL dependencies to the version used by Bump.
+
 ### From Source
+
 ```bash
 git clone https://github.com/soyuz-dev/Bump.git
 cd Bump
 ./gradlew build
 ```
 
+On Windows, use `gradlew.bat` instead of `./gradlew`.
+
 ---
 
 ## Minimal Program
+
+```kotlin
+import org.soyuz.engine.dsl.*
+import org.soyuz.engine.render.SolidColor
+import org.soyuz.engine.shape.CircleShape
+import org.soyuz.util.Color
+import org.soyuz.util.math.Vector2D
+
+fun main() = bump {
+    window("Hello Bump", 800, 600) {
+        scene("main") {
+            entity("circle") {
+                position = Vector2D(400.0, 300.0)
+                shape = CircleShape(50.0)
+                painter = SolidColor(Color(255, 100, 80))
+            }
+        }
+    }
+}
+```
+
+That's a window, an engine, a scene, and a visible circle. No manual `Application.init()`, `RuntimeEngine`, or `Application.run()`.
+
+### The Imperative API
+
+If you want to wire things up yourself, you still can:
 
 ```kotlin
 import org.soyuz.engine.core.Application
@@ -81,19 +116,18 @@ fun main() {
     val camera = Camera()
     val window = Window("Hello Bump", 800, 600)
     val engine = RuntimeEngine(window, physicsSystem = null, camera)
-    
+
     Application.windows.add(window, engine) {
         engine.shader = Assets.shader("default")
         engine.renderSystem = RuntimeRenderSystem(Mesh.quad(), Mesh.circle(32))
     }
-    
-    val scene = RuntimeScene("main")
-    engine.loadScene(scene)
+
+    engine.loadScene(RuntimeScene("main"))
     Application.run()
 }
 ```
 
-This creates a blank window. No entities yet, just the engine running.
+Both APIs use the same runtime components. The DSL handles setup; it doesn't hide the engine from you.
 
 ---
 
@@ -101,17 +135,35 @@ This creates a blank window. No entities yet, just the engine running.
 
 Entities are the core of Bump. Everything — physics objects, UI elements, sprites — can be made with a `GameEntity`.
 
+### With the DSL
+
+```kotlin
+// Inside scene("main") { ... }
+val circle = entity("my_circle") {
+    position = Vector2D(400.0, 300.0)
+    shape = CircleShape(50.0)
+    painter = SolidColor(Color(255, 100, 80))
+}
+
+// `circle` is a real entity, not a DSL-only representation.
+circle.position = Vector2D(450.0, 300.0)
+```
+
+You can call the scene's entity builder at runtime, too — that's how BrickPit DSL spawns new balls and bricks after the game starts.
+
+### Direct Entity Creation
+
 ```kotlin
 val circle = DefaultGameEntity("my_circle")
-circle.position = Vector2D(400.0, 300.0)       // world position
-circle.shape = CircleShape(50.0)               // 50px radius
-circle.painter = SolidColor(Color(255, 100, 80)) // orange-red
+circle.position = Vector2D(400.0, 300.0)
+circle.shape = CircleShape(50.0)
+circle.painter = SolidColor(Color(255, 100, 80))
 scene.addEntity(circle)
 ```
 
 ### The Fluent Entity Builder
 
-Bump provides `infix` functions for declarative entity creation:
+Bump also provides `infix` functions for declarative entity creation:
 
 ```kotlin
 DefaultGameEntity("ball") at
@@ -136,7 +188,8 @@ DefaultGameEntity("ball") at
 - `TriangleShape.equilateral(size)` — equilateral triangle
 - `TriangleShape.isosceles(width, height)` — isosceles triangle
 
-**Colliders** are created automatically from shapes:
+**Colliders** can be created from shapes:
+
 ```kotlin
 circle.collider = Collider(circle.shape!!)
 ```
@@ -148,19 +201,22 @@ The `Collider(shape)` factory returns the right collider type (`CircleCollider`,
 ## Rendering
 
 ### Solid Colors
+
 ```kotlin
 entity.painter = SolidColor(Color(255, 100, 80))        // RGB 0-255
 entity.painter = SolidColor(Color(255, 100, 80, 128))   // with alpha
 ```
 
 ### Textures (Images)
+
 ```kotlin
-entity.painter = ImagePainter(Assets.texture("cat"))  // loads /textures/cat.png
+entity.painter = ImagePainter(Assets.texture("cat"))  // /textures/cat.png
 ```
 
 ### Text
+
 ```kotlin
-val font = Assets.font("roboto")  // loads /fonts/roboto.ttf
+val font = Assets.font("roboto")  // /fonts/roboto.ttf
 val textPainter = TextPainter(font)
 textPainter.text = "Score: 100"
 textPainter.fontSize = 24f
@@ -169,6 +225,7 @@ entity.painter = textPainter
 ```
 
 ### Custom Colors
+
 ```kotlin
 Color(255, 128, 0)           // orange
 Color(255, 100, 80, 150)     // semi-transparent
@@ -179,39 +236,75 @@ Color.random()                // random color
 
 ## Scene Management
 
-### Creating and Switching Scenes
+Scenes hold collections of entities. You can create multiple scenes and switch between them. **Switching doesn't remove the old scene's entities.**
 
-Scenes hold collections of entities. You can create multiple scenes and switch between them.
+### With the DSL
+
+```kotlin
+// Inside window("Game", 800, 600) { ... }
+val menu = scene("menu") {
+    entity("menu_background") {
+        position = Vector2D(400.0, 300.0)
+        shape = RectangleShape(500.0, 300.0)
+        painter = SolidColor(Color(60, 120, 200))
+    }
+}
+
+val game = scene("game") {
+    entity("player") {
+        position = Vector2D(400.0, 300.0)
+        shape = CircleShape(30.0)
+        painter = SolidColor(Color(255, 100, 80))
+    }
+}
+
+startWith("menu")
+
+// Switch later:
+engine.loadScene(game)
+```
+
+You can reuse an entity ID in different scenes. Each DSL scene has its own physics context, so a `player` in one scene doesn't share physics registrations with a `player` in another.
+
+### Imperative Scene Creation
 
 ```kotlin
 val menuScene = RuntimeScene("menu")
 val gameScene = RuntimeScene("game")
 
-// Add entities to each scene
-DefaultGameEntity("play_btn") at
-    Vector2D(400.0, 300.0) with
-    RectangleShape(200.0, 50.0) with
-    SolidColor(Color(60, 120, 200)) within
-    menuScene
-
-// Start with the menu
 engine.loadScene(menuScene)
 
-// Switch scenes at runtime
-engine { dt ->
-    if (startGame) {
-        engine.loadScene(gameScene)
-    }
-}
+// Later:
+engine.loadScene(gameScene)
 ```
 
-**Note:** Scenes persist in memory when you switch away from them. Entities are not removed — they stay loaded for instant switching back. If you need to free memory, call `scene.cleanup()` manually on scenes you won't revisit.
+Scenes persist in memory when switched away from. If you permanently dispose of a scene, call `scene.cleanup()` when it is no longer active and won't be reused.
 
 ---
 
 ## Physics
 
+### Physics in the DSL
+
+```kotlin
+val gravity = ConstantAccelerationField(Vector2D(0.0, 981.0))
+
+entity("ball") {
+    position = Vector2D(300.0, 200.0)
+    shape = CircleShape(20.0)
+    painter = SolidColor(Color(255, 100, 80))
+
+    physics {
+        body = PointMass(mass = 1.0, restitution = 0.7) with gravity
+        collider = Collider(CircleShape(20.0))
+    }
+}
+```
+
+The DSL registers the body and collider with that scene's physics systems. No separate registration calls needed.
+
 ### PointMass (no rotation)
+
 ```kotlin
 val body = PointMass(mass = 1.0, restitution = 0.7)
 body.velocity = Vector2D(200.0, -300.0)
@@ -219,6 +312,7 @@ physicsSystem.registerBody("my_circle", body)
 ```
 
 ### RigidBody (with rotation)
+
 ```kotlin
 val body = RigidBody(mass = 2.0, restitution = 0.5, friction = 0.4, width = 60.0, height = 40.0)
 body.angularVelocity = 5.0  // spin
@@ -226,20 +320,22 @@ physicsSystem.registerBody("my_brick", body)
 ```
 
 ### Infinite Mass
+
 Set mass to `0.0` for immovable objects (walls, floors):
+
 ```kotlin
 val wall = PointMass(mass = 0.0)
 ```
 
 ### Force Fields
+
 ```kotlin
 val gravity = ConstantAccelerationField(Vector2D(0.0, 981.0))
 
-// Add to body:
 body.addField(gravity)
 
-// Or with infix:
-val body = PointMass(mass = 1.0) with gravity
+// Or with infix (import org.soyuz.engine.physics.with):
+val fallingBody = PointMass(mass = 1.0) with gravity
 ```
 
 **Available forces:**
@@ -249,6 +345,7 @@ val body = PointMass(mass = 1.0) with gravity
 - `GravityField(G)` — n-body gravitational attraction
 
 ### Drag & Thrust via Polynomials
+
 ```kotlin
 // Linear drag: force = -velocity * 0.5
 body.addField(VelocityForceField(Polynomial.linear(0.5)))
@@ -256,8 +353,8 @@ body.addField(VelocityForceField(Polynomial.linear(0.5)))
 // Quadratic air resistance: force = -velocity * 0.1 * |velocity|
 body.addField(VelocityForceField(Polynomial.quadratic(0.1)))
 
-// Constant thrust: always push forward
-body.addField(VelocityForceField(Polynomial(-0.5)))  // negative = thrust!
+// Constant thrust
+body.addField(VelocityForceField(Polynomial(-0.5)))
 ```
 
 ---
@@ -267,8 +364,8 @@ body.addField(VelocityForceField(Polynomial(-0.5)))  // negative = thrust!
 Connect two bodies together:
 
 ```kotlin
-val rod = RodJoint(bodyA, bodyB, restLength = 150.0)     // fixed distance
-val rope = RopeJoint(bodyA, bodyB, maxLength = 200.0)    // one-way (can be closer)
+val rod = RodJoint(bodyA, bodyB, restLength = 150.0)
+val rope = RopeJoint(bodyA, bodyB, maxLength = 200.0)
 val spring = SpringJoint(bodyA, bodyB, restLength = 100.0, stiffness = 500.0, damping = 10.0)
 
 physicsSystem.addJoint(rod)
@@ -278,11 +375,91 @@ physicsSystem.addJoint(rod)
 - `RopeJoint` — can go slack, constrains max distance only
 - `SpringJoint` — soft, force-based with damping
 
+For a scene created through the DSL, use that scene's `physicsContext.physicsSystem` when adding joints directly. Bodies connected by a joint should belong to the same scene.
+
+---
+
+## Input & Behaviours
+
+### Scene-Scoped Keyboard Input
+
+```kotlin
+// Inside scene("game") { ... }
+onKeyDown(GLFW_KEY_SPACE) {
+    println("Jump!")
+}
+
+onKeyUp(GLFW_KEY_SPACE) {
+    println("Space released")
+}
+
+onKeyHeld(GLFW_KEY_RIGHT) { dt ->
+    player.position += Vector2D(200.0 * dt, 0.0)
+}
+```
+
+The callbacks belong to the scene. They only run while that scene is active.
+
+### Entity-Owned Subscriptions
+
+```kotlin
+val player = entity("player") {
+    position = Vector2D(400.0, 300.0)
+    shape = CircleShape(20.0)
+    painter = SolidColor(Color(255, 100, 80))
+}
+
+onKeyDown(GLFW_KEY_SPACE, owner = player) {
+    println("Player jumped")
+}
+```
+
+When the entity is removed, its owned keyboard subscriptions are cancelled too.
+
+You can also cancel a subscription yourself:
+
+```kotlin
+val subscription = onKeyDown(GLFW_KEY_R) {
+    println("Reload")
+}
+
+subscription.cancel()
+```
+
+### Collision Events
+
+```kotlin
+onCollisionEvent { event ->
+    when (event.type) {
+        CollisionEventType.ENTER -> println("Contact started")
+        CollisionEventType.STAY  -> println("Still touching")
+        CollisionEventType.EXIT  -> println("Contact ended")
+    }
+}
+```
+
+For entity-level callbacks, use `onCollision` inside the entity builder. This handles new contacts; scene-level events expose all three phases.
+
+### Mouse Input
+
+The scene DSL doesn't have `onMouseDown` yet. You can still use the existing per-window input APIs or `MouseListener` in a frame callback:
+
+```kotlin
+// Inside a window/scene DSL where `engine` and `window` are available
+engine { dt ->
+    if (MouseListener.isMouseJustPressed(window.handle, GLFW_MOUSE_BUTTON_LEFT)) {
+        val mouseWorld = camera.screenToWorld(MouseListener.getPos(window.handle))
+        println("Clicked at $mouseWorld")
+    }
+}
+```
+
 ---
 
 ## UI System
 
 ### Buttons
+
 ```kotlin
 val btn = engine.ui.button("play", 400.0, 300.0, 200.0, 50.0) {
     println("Clicked!")
@@ -291,12 +468,14 @@ scene.addEntity(btn)
 ```
 
 ### Labels
+
 ```kotlin
 val label = engine.ui.label("score", 10.0, 10.0, "Score: 0", font, 20f, Color.WHITE)
 scene.addEntity(label)
 ```
 
 ### Sliders
+
 ```kotlin
 val (track, thumb) = engine.ui.slider("volume", 400.0, 500.0, 300.0, 30.0,
     min = 0.0, max = 100.0, initial = 50.0
@@ -306,6 +485,7 @@ scene.addEntity(thumb)
 ```
 
 ### Text Input
+
 ```kotlin
 val (input, bg) = engine.ui.textInput("name", 400.0, 300.0, font = font,
     placeholder = "Enter name...",
@@ -316,7 +496,9 @@ scene.addEntity(input)
 ```
 
 ### Custom Interactive Entities
+
 Chain modifiers for custom behavior:
+
 ```kotlin
 entity.interactive = Interactive { pos -> entity.collider!!.containsPoint(pos, entity.transform) }
     .clickable { println("clicked") }
@@ -331,36 +513,35 @@ entity.interactive = Interactive { pos -> entity.collider!!.containsPoint(pos, e
 
 **Available modifiers:** `clickable`, `hoverable`, `draggable`, `scrollable`, `focusable`, `doubleClickable`, `keyboardInput`
 
+The UI factory and `Interactive` APIs work with both DSL-created and manually created scenes.
+
 ---
 
 ## Audio
 
 ```kotlin
-// One-time setup (called by Application.init())
-AudioSystem.init()
-
-// Load and play
 val sound = AudioSource()
-sound.play(Assets.audio("meow"))    // loads /audio/meow.ogg
+sound.play(Assets.audio("meow"))    // /audio/meow.ogg
 
-// Controls
 sound.volume = 0.5f
 sound.pitch = 1.2f
 sound.looping = true
 sound.stop()
 ```
 
-Audio files go in `src/main/resources/audio/`. OGG format only.
+Audio files go in `src/main/resources/audio/`. OGG Vorbis only. `Application.init()` sets up the audio system; `bump {}` takes care of that for you.
 
-**WSL2 Audio Setup:**
+On WSL2, audio may require:
+
 ```bash
-echo 'export PULSE_SERVER=unix:/mnt/wslg/PulseServer' >> ~/.bashrc
-source ~/.bashrc
+export PULSE_SERVER=unix:/mnt/wslg/PulseServer
 ```
 
 ---
 
 ## Timers & Game Loop
+
+The behaviour API doesn't replace the frame loop. You can use both.
 
 ```kotlin
 // Every frame
@@ -389,11 +570,25 @@ engine.during(500.0) { progress ->
 }
 ```
 
+`dt` is in seconds; the timer delay examples above use milliseconds. Coroutine-based `wait(Duration)` behaviour is planned, not part of v1.6-alpha.
+
 ---
 
 ## Windowing
 
-### Standard Window
+### Standard Window (DSL)
+
+```kotlin
+bump {
+    window("My Game", 800, 600) {
+        scene("main") {
+            // entities go here
+        }
+    }
+}
+```
+
+### Standard Window (Imperative)
 
 ```kotlin
 val window = Window("My Game", 800, 600)
@@ -402,12 +597,13 @@ Application.windows.add(window, engine) { /* setup */ }
 ```
 
 ### Transparent Window
+
 ```kotlin
 val window = TransparentWindow("Overlay", 400, 300)
 // Window is borderless and transparent — only rendered content is visible
 ```
 
-**Note:** On NVIDIA GPUs, transparency requires a control panel setting:
+**Note:** On NVIDIA GPUs, transparency may require this control panel setting:
 Vulkan/OpenGL present method → "Prefer native"
 
 ### Custom Window
@@ -422,13 +618,8 @@ window.show()
 Creates a transparent window with pre-built title bar, close button, and drag-to-move. Content entities are added normally. The window's `camera` is exposed for full control:
 
 ```kotlin
-// Zoom
 window.camera.setZoom(0.5f)
-
-// Rotate the entire content
 window.camera.setRotation(Math.PI.toFloat() / 4)
-
-// Pan
 window.camera.setPosition(100f, 50f)
 ```
 
@@ -436,43 +627,45 @@ The content rotates around its center. The backing window is sized to the diagon
 
 See `CustomWindowTest.kt` for a full example.
 
-> **Warning:** Custom windows are in alpha. Tested on Windows with Intel and NVIDIA GPUs, and WSLg. Content is not yet stencil-clipped to the rotated rect — entities near the edges may render into the transparent margins.
+> **Warning:** Custom windows are in alpha. Content is not yet stencil-clipped to the rotated rect — entities near the edges may render into the transparent margins.
 
 ### Multiple Windows
 
 ```kotlin
-val window1 = Window("Window 1", 800, 600)
-val window2 = Window("Window 2", 600, 400)
-val engine1 = RuntimeEngine(window1, null, camera1)
-val engine2 = RuntimeEngine(window2, null, camera2)
+bump {
+    window("Triangle", 600, 500) {
+        scene("triangle") { /* ... */ }
+    }
 
-Application.windows.add(window1, engine1) { /* setup */ }
-Application.windows.add(window2, engine2) { /* setup */ }
-
-Application.run()  // runs both windows
+    window("Circle", 600, 500) {
+        scene("circle") { /* ... */ }
+    }
+}
 ```
 
-Each window has its own engine, scene, and UI system. Input is per-window.
+Each window has its own engine, scene, and UI system. Input is per-window. See `MultiWindowDSL.kt` for a working example.
 
 ---
 
 ## Camera & Screen Effects
 
 ### Following a Target
+
 ```kotlin
 var cameraX = trackedEntity.position.x.toFloat()
 var cameraY = trackedEntity.position.y.toFloat()
 
 engine { dt ->
-    // Smooth follow
     cameraX += (trackedEntity.position.x.toFloat() - cameraX) * 0.1f
     cameraY += (trackedEntity.position.y.toFloat() - cameraY) * 0.1f
     camera.lookAt(cameraX, cameraY)
 }
 ```
+
 `lookAt(x, y)` points the camera at a world position. The math to convert that to screen-relative offset is handled internally. Use `camera.setPosition(...)` directly only when you need raw control (e.g., camera shake).
 
 ### Camera Shake
+
 ```kotlin
 engine.during(500.0) { progress ->
     val intensity = (1.0 - progress) * 20.0
@@ -486,6 +679,7 @@ engine.after(500.0) {
 ```
 
 ### Zoom
+
 ```kotlin
 camera.setZoom(2.0f)   // zoom out (see more)
 camera.setZoom(0.5f)   // zoom in (magnify)
@@ -493,6 +687,7 @@ camera.zoom(1.1f)       // multiply current zoom by 1.1
 ```
 
 ### Rotation
+
 ```kotlin
 camera.setRotation(Math.PI.toFloat() / 4)  // rotate 45 degrees
 camera.setRotation(0f)                      // reset
@@ -501,7 +696,7 @@ camera.setRotation(0f)                      // reset
 Rotation is centered on the content. Mouse hit-testing converts screen coordinates to world coordinates via `camera.screenToWorld()`, so UI interactions work correctly under any rotation.
 
 ### Easing Functions
-Use the `Easing` library for smooth animations:
+
 ```kotlin
 engine.during(1000.0) { progress ->
     val eased = Easing.cubicOut(progress)
@@ -519,7 +714,7 @@ Entities fire callbacks when properties change:
 
 ```kotlin
 entity.onPositionChanged { newPos ->
-    label.position = newPos + Vector2D(0.0, -50.0)  // label follows entity
+    label.position = newPos + Vector2D(0.0, -50.0)
 }
 
 entity.onRotationChanged { newRotation ->
@@ -535,7 +730,7 @@ entity.onShapeChanged { newShape ->
 
 ## Where Files Go
 
-```
+```text
 src/main/resources/
 ├── shaders/     — default.vert, default.frag (GLSL 330 core)
 ├── textures/    — PNG images only
@@ -547,53 +742,45 @@ src/main/resources/
 
 ## Common Issues and Quick Fixes
 
-### "No context is current" crash
-OpenGL functions must be called when a window's context is active. If you get this error, make sure you're calling GL operations after `engine.init()` or inside `engine.everyFrame { }`. The engine manages context switching automatically.
-
 ### Window opens but nothing renders
-- Did you add entities to the scene? `scene.addEntity(entity)`
-- Did you call `engine.loadScene(scene)` before `Application.run()`?
 - Are your entities positioned within the visible area?
+- Do visible entities have both a shape and a painter?
+- If you're using the imperative API, did you add the entities to the scene and load it with `engine.loadScene(scene)`?
 
 ### Entity doesn't move with physics
-- Did you register the body? `physicsSystem.registerBody(entity.id, body)`
-- Did you register the collider? `collisionSystem.registerCollider(entity.id, collider)`
 - Is the mass zero? `mass = 0.0` means infinite mass — the body won't move.
-- Did you add forces? Bodies need force fields to accelerate.
+- Did you give it an initial velocity or add a force field?
+- With the DSL, put the body in `physics { body = ... }`. With the imperative API, register it with the physics system that updates the scene.
 
-### Collision detection isn't working
-- Both entities must have colliders registered with the `CollisionSystem`.
-- Both entities must have bodies registered with the `PhysicsSystem`.
-- Collisions only fire `ENTER` once per contact.
+### Collisions aren't working
+- Both objects need physics bodies and colliders.
+- Check that the entities are in the same scene; physics state is scene-specific.
+- `onCollision` runs when a contact begins. For `ENTER`, `STAY`, and `EXIT`, use `onCollisionEvent`.
+
+### Keyboard input isn't responding
+- Is the intended window focused?
+- Scene-scoped callbacks only run while their scene is active.
+- An entity-owned subscription stops receiving callbacks when its entity is removed.
 
 ### Text doesn't appear
-- Is `GL_BLEND` enabled? The engine does this automatically.
-- Did you call `textPainter.update(0f)` after setting text? UI factory methods handle this.
-- Is the font loaded? Check `Assets.font("name")` matches the file in `resources/fonts/`.
+- Does the font name match the file in `resources/fonts/`?
+- Is the text colour visible against the background?
+- If you're constructing `TextPainter` manually, check its text and font size.
 
 ### Audio doesn't play
-- Did you call `Application.init()`? This initializes `AudioSystem`.
-- Are your audio files OGG format? WAV is not supported.
-- On WSL2: Set `export PULSE_SERVER=unix:/mnt/wslg/PulseServer`.
+- Audio must be OGG Vorbis. Renaming a WAV or MP3 file to `.ogg` won't convert it.
+- Check that the file exists under `resources/audio/`.
+- On WSL2, try `export PULSE_SERVER=unix:/mnt/wslg/PulseServer`.
 
-### Timer callbacks not firing
-- Timers added during a timer callback are deferred to the next frame.
-- `everyFrame` / `engine { }` must be called during setup.
-
-### Multi-window textures/shaders appear white
-- Each window needs its own OpenGL context. `Assets` handles this automatically.
-- Don't share `Shader` or `Texture` objects between engines.
-
-### Key presses not detected
-- Input is per-window. Use `engine.input.isKeyDown(key)` or `KeyListener.isKeyDown(window.handle, key)`.
-- Some key combinations don't work due to keyboard ghosting.
+### Multi-window rendering looks wrong
+- Each window has its own OpenGL context. Avoid reusing a shader or texture from one context in another unless you've deliberately set up sharing.
+- Use `Assets` to load resources for the window's current context.
 
 ### Transparent window appears opaque on NVIDIA
 - Open NVIDIA Control Panel → 3D Settings → Vulkan/OpenGL present method → set to "Prefer native".
 
-### Custom window clicks don't register after rotation
-- Make sure `UISystem` is using `camera.screenToWorld()` for hit-testing. The default `RuntimeEngine` setup does this automatically.
-- If entities are added in the wrong z-order, the close button may be covered by the title bar drag overlay. Add the close button last.
+### Rotated custom window has visual artefacts
+- Content is not yet stencil-clipped to the rotated rectangle. Entities near the edges may render into the transparent margins. or may appear visually outside the window
 
 ---
 
@@ -617,62 +804,41 @@ Bump uses the file extension to decide how to load a file. If the bytes inside d
 
 ### Audio (`/audio/`)
 - **Expected:** OGG Vorbis (`.ogg`)
-- **What happens if wrong:** STB Vorbis will crash, play garbage, or play nothing if the codec doesn't match.
-- **Fix:** Convert to OGG Vorbis using Audacity, ffmpeg, or an online converter. Renaming `.wav` to `.ogg` will **not** work.
+- **What happens if wrong:** The decoder may fail or playback may be silent if the codec doesn't match.
+- **Fix:** Convert to OGG Vorbis using Audacity or ffmpeg. Renaming `.wav` to `.ogg` will **not** work.
 
 ### Shaders (`/shaders/`)
 - **Expected:** GLSL 330 core (`.vert`, `.frag`)
-- **What happens if wrong:** Shader compiles but renders black/white or crashes the GPU driver.
+- **What happens if wrong:** Shaders may fail compilation or render incorrectly.
 - **Fix:** Shaders must declare `#version 330 core` and match the engine's uniform names (`uProjection`, `uModel`, `uColor`, `uTexture`, `uUseTexture`).
-
-### How to check what a file actually is
-
-**Windows (PowerShell):**
-```powershell
-Get-Content .\file.ogg -Encoding Byte -TotalCount 4
-```
-
-**Common magic numbers:**
-| Format | First bytes (hex) |
-|--------|-------------------|
-| PNG    | `89 50 4E 47`     |
-| OGG    | `4F 67 67 53`     |
-| TTF    | `00 01 00 00`     |
-| WAV    | `52 49 46 46`     |
-| MP3    | `FF FB` or `ID3`  |
-
-**Linux/macOS:**
-```bash
-file file.ogg
-hexdump -C file.ogg | head -1
-```
 
 ---
 
 ## Quick Reference
 
-| Task               | Code                                                                      |
-|--------------------|---------------------------------------------------------------------------|
-| Create entity      | `DefaultGameEntity("id")`                                                 |
-| Set position       | `entity.position = Vector2D(x, y)`                                        |
-| Set shape          | `entity.shape = CircleShape(r)`                                           |
-| Set color          | `entity.painter = SolidColor(Color(r,g,b))`                               |
-| Add collider       | `entity.collider = Collider(shape)`                                       |
-| Add physics        | `body = PointMass(mass) with gravity`                                     |
-| Register physics   | `physicsSystem.registerBody(id, body)`                                    |
-| Register collider  | `collisionSystem.registerCollider(id, collider)`                          |
-| Add to scene       | `scene.addEntity(entity)`                                                 |
-| Fluent entity      | `Entity("id") at pos with shape with painter within scene`                |
-| Load font          | `Assets.font("roboto")`                                                   |
-| Load texture       | `Assets.texture("cat")`                                                   |
-| Load audio         | `Assets.audio("meow")`                                                    |
-| Every frame        | `engine { dt -> ... }`                                                    |
-| After delay        | `engine.after(ms) { ... }`                                                |
-| Switch scene       | `engine.loadScene(scene)`                                                 |
-| Make button        | `engine.ui.button("id", x, y, w, h) { ... }`                              |
-| Make label         | `engine.ui.label("id", x, y, "text", font, size, color)`                  |
-| Transparent window | `TransparentWindow("title", w, h)`                                        |
-| Custom window      | `CustomWindow("title", w, h, font)`                                       |
-| Rotate window      | `customWindow.camera.setRotation(radians)`                                |
-| Zoom window        | `customWindow.camera.setZoom(scale)`                                      |
-| Follow entity      | `camera.lookAt(target.position.x.toFloat(), target.position.y.toFloat())` |
+| Task                | Code                                                     |
+|---------------------|----------------------------------------------------------|
+| Start the DSL       | `bump { ... }`                                           |
+| Create window       | `window("Title", 800, 600) { ... }`                      |
+| Create scene        | `scene("game") { ... }`                                  |
+| Create entity       | `entity("ball") { ... }`                                 |
+| Set position        | `position = Vector2D(x, y)`                              |
+| Set shape           | `shape = CircleShape(r)`                                 |
+| Set colour          | `painter = SolidColor(Color(r, g, b))`                   |
+| Add physics in DSL  | `physics { body = ...; collider = ... }`                 |
+| Key press callback  | `onKeyDown(key) { ... }`                                 |
+| Key held callback   | `onKeyHeld(key) { dt -> ... }`                           |
+| Collision events    | `onCollisionEvent { event -> ... }`                      |
+| Cancel subscription | `subscription.cancel()`                                  |
+| Switch scene        | `engine.loadScene(scene)`                                |
+| Every frame         | `engine { dt -> ... }`                                   |
+| After delay         | `engine.after(ms) { ... }`                               |
+| Load font           | `Assets.font("roboto")`                                  |
+| Load texture        | `Assets.texture("cat")`                                  |
+| Load audio          | `Assets.audio("meow")`                                   |
+| Make button         | `engine.ui.button("id", x, y, w, h) { ... }`             |
+| Make label          | `engine.ui.label("id", x, y, "text", font, size, color)` |
+| Transparent window  | `TransparentWindow("title", w, h)`                       |
+| Custom window       | `CustomWindow("title", w, h, font)`                      |
+| Rotate window       | `customWindow.camera.setRotation(radians)`               |
+| Set Camera Position | `camera.lookAt(x, y)`                                    |

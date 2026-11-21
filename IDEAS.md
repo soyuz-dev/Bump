@@ -1,12 +1,16 @@
+
 # Ideas
 
 Random brain dumps worth revisiting later. No deadlines, no promises.
 
 ---
 
-## Giant Idea
+## Novel
+
+Things that make Bump more than a conventional 2D game engine.
 
 ### Rotatable Windows
+
 - Simulation window (A): rotated, fully physical, contains the scene
 - OS window (B): axis-aligned, borderless, transparent background
 - Render A inside B, clip to A's rotated rect via stencil buffer
@@ -15,172 +19,202 @@ Random brain dumps worth revisiting later. No deadlines, no promises.
 
 **Status:** Rotation works. The backing-square trick, `Camera.setDimensions`, `Camera.screenToWorld`, and world-space UI hit-testing are all in place. **Remaining:** stencil clipping so entities don't bleed into the transparent margins.
 
-## Physics
-
 ### Window as RigidBody
+
 Window bounds are physical entities with colliders. Dragging/resizing the window pushes objects in the scene. The OS window becomes a game mechanic, not a container.
 
-### Growing window on collision
+### Growing Window on Collision
+
 Ball hits window edge → window expands in that direction. The viewport fights back.
 
-### Buoyancy / fluid simulation
-Simple density-based buoyancy. Bodies with `density < fluidDensity` float upward. `BuoyancyField` applying force based on body volume and submersion depth.
+### Bump Video (separate repo/module)
 
-### Weld / fixed joints
-Glue two bodies together at a fixed relative offset. Zero degrees of freedom. Useful for building compound objects from simple shapes.
+Headless rendering + JavaCV/FFmpeg. Declarative video authoring built on Bump's entity system, timers, and `Easing`. Mobject-style animation primitives (`play()`, `fadeIn()`, `moveTo()`, `rotate()`).
 
-### Soft body / jelly physics
-Mesh of `PointMass` instances connected by `SpringJoint`s. Deforms on collision. Satisfying squish.
+### WebAssembly Target
 
-### Barnes-Hut-like gravity
-Replace O(n²) pairwise force calculations with a quadtree. Center-of-mass approximation for distant clusters. O(n log n). The bit-hack exponent check still applies at the tree node level. Could also add a mass-weighted opening criterion (`m*s/d³ < theta`) to bound tidal error rather than geometric error.
+Kotlin/Wasm + WebGL. Bump in the browser. Long-term fever dream.
+
+### Barnes-Hut-like Gravity
+
+Replace O(n²) pairwise force calculations with a quadtree. Centre-of-mass approximation for distant clusters. O(n log n). The bit-hack exponent check still applies at the tree node level.
+
+Could also add a mass-weighted opening criterion (`m*s/d³ < theta`) to bound tidal error rather than geometric error.
 
 ---
 
-## Rendering
+## Conventional
 
-### Debug drawing layer
+The usual features and improvements that make a game engine more capable.
+
+### Physics
+
+#### Buoyancy / Fluid Simulation
+
+Simple density-based buoyancy. Bodies with `density < fluidDensity` float upward. `BuoyancyField` applying force based on body volume and submersion depth.
+
+#### Weld / Fixed Joints
+
+Glue two bodies together at a fixed relative offset. Zero degrees of freedom. Useful for building compound objects from simple shapes.
+
+#### Soft Body / Jelly Physics
+
+Mesh of `PointMass` instances connected by `SpringJoint`s. Deforms on collision. Satisfying squish.
+
+### Rendering
+
+#### Debug Drawing Layer
+
 Toggleable overlay for colliders, contact points, normals, AABBs, velocity vectors. Press F1 to show/hide. Critical for physics debugging.
 
-### PainterModifier chain
+#### PainterModifier Chain
+
 ```kotlin
 painter = SolidColor(1.0, 0.3, 0.1) + OpacityModifier(0.8) + TintModifier(0.2, 0.0, 0.1)
 ```
+
 Modifiers applied in order at bind time. Composability without subclass explosion.
 
-### Particle system
+#### Particle System
+
 Lightweight GPU-particle system for trails, sparks, debris on collision. `ParticleEmitter` as a component. Fires on `CollisionEvent`.
 
-### Render layers / z-ordering
+#### Render Layers / Z-Ordering
+
 Entities sorted by layer before drawing. Background, game, foreground, UI. Prevents painter's algorithm issues.
 
-### Sprite sheet / animation
+#### Sprite Sheet / Animation
+
 `AnimatedPainter` that cycles through UV regions of a texture atlas. Frame-based or time-based animation.
 
-### Stencil clipping
+#### Stencil Clipping
+
 Clip rendering to a rotated rectangle. Required for rotatable windows to prevent entities from bleeding into transparent margins.
 
----
+### UI System
 
-## UI System
+#### Checkbox / Toggle
 
-### Checkbox / Toggle
 Clickable entity with on/off state. `UI.toggle(id, x, y, initial) { value -> ... }`. Uses observable state internally.
 
-### Dropdown / Context menu
+#### Dropdown / Context Menu
+
 List of options that appears on click. Uses `Interactive` for each item. Renders on top of other elements.
 
-### Layout system
+#### Layout System
+
 Flexbox-like or anchor-based layout. UI elements position relative to parent or screen edges. `UI.hbox { }`, `UI.vbox { }` builders.
 
-### UI themes
-Predefined color schemes and painter configurations. `UI.theme = Theme.DARK` applies consistent styling to all UI factory elements.
+#### UI Themes
 
----
+Predefined colour schemes and painter configurations. `UI.theme = Theme.DARK` applies consistent styling to all UI factory elements.
 
-## Entities / DSL
+### Entities / DSL
 
-### Entity templates
+#### Entity Templates
+
 Pre-configured entity blueprints (bouncy ball, heavy box, static wall, attractor) that the DSL can reference by name.
 
-### Entity lifecycle hooks
-`onSpawn`, `onDestroy`, `onCollisionEnter`, `onCollisionExit`, `onCollisionStay`. EventBus already supports this — just needs wiring to entity callbacks.
+#### Entity Lifecycle Hooks
 
-### Prefabs
-Reusable entity definitions. Instantiate with overrides. `prefab("bouncy_ball") { position(100, 200); velocity(300, 0) }`
+`onSpawn`, `onDestroy`, `onCollisionEnter`, `onCollisionExit`, `onCollisionStay`.
 
-### Child entities
+Collision events are already routed to scenes and entities. Dedicated lifecycle hooks and per-phase entity callbacks remain to be added.
+
+#### Prefabs
+
+Reusable entity definitions. Instantiate with overrides.
+
+```kotlin
+prefab("bouncy_ball") {
+    position(100, 200)
+    velocity(300, 0)
+}
+```
+
+#### Child Entities
+
 Optional parent-child relationships. World transform computed by walking up the tree. Cleanup cascades. Useful for compound objects and complex UI.
 
----
+### Systems
 
-## Systems
+#### Broadphase (Spatial Hash)
 
-### Broadphase (spatial hash)
-Replace O(n²) collision detection with spatial partitioning. Divide world into grid cells, only check pairs in same or adjacent cells. (Bounding circle broadphase already implemented.)
+Replace O(n²) collision detection with spatial partitioning. Divide world into grid cells, only check pairs in same or adjacent cells. Bounding circle broadphase already implemented.
 
-### Serialization
+#### Serialization
+
 Scene save/load. Serialize entity graph, transforms, colliders, physics bodies. JSON or a custom binary format. Needed for level editing later.
 
-### Profiling / metrics overlay
+#### Profiling / Metrics Overlay
+
 FPS, frame time, body count, collision pairs checked, force calculations skipped (via bit-hack counter). Useful for tuning the threshold in `GravityField`.
 
-### Property bindings
-Formalize the observable entity pattern into a `Binding<T>` system. `label.position bind panel.position + offset`. Animated transitions via `Easing`.
+#### Property Bindings
 
----
+Formalise the observable entity pattern into a `Binding<T>` system. `label.position bind panel.position + offset`. Animated transitions via `Easing`.
 
-## Platform
+### Platform & Runtime
 
-### Threaded simulation
+#### Threaded Simulation
+
 Physics step runs on a worker thread while main thread handles GLFW events + rendering. Avoids visual pause during window drag/resize on Windows. Requires double-buffered scene state.
 
-### Headless mode
+#### Headless Mode
+
 Run without a window for unit testing physics, AI, or server-side simulation. No GLFW dependency. Foundation for Bump Video — headless rendering + FFmpeg encoding for programmatic video generation.
 
-### Bump Video (separate repo/module)
-Headless rendering + JavaCV/FFmpeg. Declarative video authoring built on Bump's entity system, timers, and `Easing`. Mobject-style animation primitives (`play()`, `fadeIn()`, `moveTo()`, `rotate()`).
+#### 3D Rendering (2.0-alpha)
 
-### WebAssembly target
-Kotlin/Wasm + WebGL. Bump in the browser. Long-term fever dream.
+The math foundation is in place: `Vector3D`, `Quaternion`, `Matrix4f.transform`.
 
-### 3D rendering (2.0-alpha)
-The math foundation is in place: `Vector3D`, `Quaternion`, `Matrix4f.transform`. Remaining: perspective projection, mesh loading (OBJ/glTF), depth buffer, lighting models, GJK/EPA collision, BVH spatial partitioning.
+Remaining: perspective projection, mesh loading (OBJ/glTF), depth buffer, lighting models, GJK/EPA collision, BVH spatial partitioning.
 
 ---
 
 ## Done (graduated from ideas)
-- [x] Velocity Verlet integration
-- [x] Circle + Rectangle colliders with SAT
-- [x] Triangle collider with SAT and barycentric point test
-- [x] Force fields attached to bodies
-- [x] Per-window input with window-handle-keyed state
-- [x] Transform with local↔world helpers
-- [x] Shader-based rendering (core profile)
+
+### Physics & Collision
+- [x] Velocity Verlet, `PointMass`, and `RigidBody` with angular physics and friction
+- [x] Circle, rectangle, and triangle collision detection (SAT, barycentric point test, clipped-edge contacts)
 - [x] CCD with substepping and corner mitigation
-- [x] EventBus with collision events (ENTER/EXIT/STAY)
-- [x] EntityAwareForceField for multi-body interactions
-- [x] n-body gravity with bit-hack exponent optimization
-- [x] Painter interface with SolidColor, ImagePainter, TextPainter
-- [x] DynamicPainter for per-frame visual updates
-- [x] Context-aware Assets caching (per GL context)
-- [x] RodJoint with Baumgarte stabilization
-- [x] RopeJoint (one-way constraint)
-- [x] SpringJoint with damping
-- [x] Triple pendulum (tested stable 10+ minutes)
-- [x] Audio system (OpenAL, OGG playback, spatial audio)
-- [x] Bounding circle broadphase (3-7x performance improvement)
-- [x] Rigidbody with angular physics, friction, proper clipped-edge contact points
+- [x] Bounding circle broadphase
+- [x] Force fields, including entity-aware forces and n-body gravity with bit-hack optimisation
+- [x] Rod, rope, and spring joints; stable triple pendulum
+- [x] Collision events (`ENTER`, `EXIT`, `STAY`)
+
+### Rendering & Windowing
+- [x] OpenGL core-profile rendering, shaders, meshes, and `RenderSystem`
+- [x] `Painter` implementations: `SolidColor`, `ImagePainter`, `TextPainter`, `DynamicPainter`
+- [x] Context-aware asset caching
+- [x] Camera transforms, shake, zoom, rotation, and screen-to-world conversion
+- [x] GLFW encapsulation, transparent windows, custom chrome, and multi-window support
+- [x] Rotatable windows with backing-square trick and correct world-space input
 - [x] Cross-platform build (Windows, Linux, macOS Intel + Apple Silicon)
-- [x] Color utility class
-- [x] UI System with Interactive decorator chain
-- [x] UISystem input router with full state management
-- [x] UI factory (button, label, slider, textInput)
-- [x] Text input field with cursor navigation
-- [x] RuntimeEngine orchestrating UI → Physics → Dynamics → Render
-- [x] RenderSystem abstraction
-- [x] Dynamic interface for per-frame update dispatch
-- [x] Observable entity properties (position, rotation, shape)
-- [x] Camera shake effect with NDC-correct offsets
-- [x] Engine timer system (everyFrame, forEvery, after, during)
-- [x] GLFW fully encapsulated — Window, WindowManager, Application
-- [x] Multi-window support via WindowManager with context switching
-- [x] Polynomial class with arithmetic and calculus
-- [x] Easing library (30+ curves, polynomial-backed)
-- [x] VelocityForceField with polynomial-based drag/thrust curves
-- [x] TriangleShape with equilateral and isosceles factories
-- [x] Camera with offset support for screen effects
-- [x] Playable Asteroids demo game
-- [x] Engine-scoped dependencies (UISystem, UI, Input per-engine)
-- [x] Deferred timer registration (pendingTimers pattern)
-- [x] Interactive { } invoke shorthand
-- [x] Transparent windows with custom chrome
-- [x] Multi-window transparency
+
+### Engine & Gameplay
+- [x] `RuntimeEngine` with physics, UI, rendering, and `Dynamic` updates
+- [x] Per-window input, UI, and engine-scoped dependencies
+- [x] Persistent scene switching
+- [x] Timers: `everyFrame`, `forEvery`, `after`, `during`, with deferred registration
+- [x] Observable entity properties
+- [x] OpenAL audio, OGG playback, and spatial audio
+- [x] UI interactions, buttons, labels, sliders, and text input
+- [x] Playable Asteroids demo
+
+### DSL & Behaviours (v1.6-alpha)
+- [x] Kotlin configuration DSL: `bump { window { scene { entity { ... } } } }`
+- [x] Declarative entity properties, physics bodies, and colliders
+- [x] Runtime entity spawning through DSL builders
+- [x] Scene-scoped keyboard callbacks (`onKeyDown`, `onKeyUp`, `onKeyHeld`)
+- [x] Cancellable subscriptions and entity-owned input callbacks
+- [x] Scene-wide and entity-level collision callbacks
+- [x] Scene-isolated physics contexts and collision routing
+- [x] BrickPit, MultiScene, and MultiWindow DSL demos
+
+### Utilities & Distribution
+- [x] `Vector2D`, `Vector3D`, `Quaternion`, `Matrix4f`, and `Transform`
+- [x] `Polynomial` arithmetic/calculus and `Easing` library (30+ curves)
+- [x] `Color` utility
 - [x] JitPack distribution
-- [x] Scene switching (persistent scenes)
 - [x] MPL-2.0 license
-- [x] Vector3D, Quaternion, Matrix4f 3D transforms
-- [x] Camera.setDimensions (backing vs content)
-- [x] Camera.screenToWorld (full transform inversion)
-- [x] World-space UI hit-testing
-- [x] **Rotatable windows** — content rotates freely while maintaining correct mouse input

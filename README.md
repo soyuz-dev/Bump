@@ -1,5 +1,7 @@
 # Bump v1.6-alpha
-[![](https://jitpack.io/v/soyuz-dev/Bump.svg)](https://jitpack.io/#soyuz-dev/Bump)
+
+[![](https://jitpack.io/v/soyuz-dev/Bump.svg)](https://jitpack.io/#soyuz-dev/Bump)\
+\
 A 2D game engine built in Kotlin with LWJGL. Designed for a DSL-driven workflow where entities own their data directly — no ECS, no ceremony.
 
 ## Status

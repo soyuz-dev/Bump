@@ -1,4 +1,5 @@
-package org.soyuz.org.soyuz.engine.dsl
+
+package org.soyuz.engine.dsl
 
 import org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE
 import org.soyuz.engine.entity.DefaultGameEntity

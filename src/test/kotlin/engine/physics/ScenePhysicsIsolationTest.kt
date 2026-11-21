@@ -1,4 +1,5 @@
-package org.soyuz.org.soyuz.engine.physics
+
+package org.soyuz.engine.physics
 
 import org.soyuz.engine.collision.Collider
 import org.soyuz.engine.entity.DefaultGameEntity

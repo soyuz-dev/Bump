@@ -1,4 +1,4 @@
-package org.soyuz.org.soyuz.math
+package org.soyuz.util.math
 
 import kotlin.math.PI
 import kotlin.math.abs

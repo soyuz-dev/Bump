@@ -1,6 +1,6 @@
-package org.soyuz.org.soyuz.engine.behaviour
 
-import org.soyuz.engine.behaviour.routeCollisions
+package org.soyuz.engine.behaviour
+
 import org.soyuz.engine.collision.Collider
 import org.soyuz.engine.collision.RuntimeCollisionSystem
 import org.soyuz.engine.entity.DefaultGameEntity

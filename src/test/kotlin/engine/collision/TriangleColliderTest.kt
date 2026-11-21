@@ -1,4 +1,4 @@
-package org.soyuz.org.soyuz.engine.collision
+package org.soyuz.engine.collision
 
 import org.soyuz.engine.shape.CircleShape
 import org.soyuz.engine.shape.TriangleShape

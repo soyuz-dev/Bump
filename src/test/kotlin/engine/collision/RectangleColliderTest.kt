@@ -1,4 +1,4 @@
-package org.soyuz.org.soyuz.engine.collision
+package org.soyuz.engine.collision
 
 import org.soyuz.util.math.Transform
 import org.soyuz.engine.shape.CircleShape
@@ -8,11 +8,11 @@ import kotlin.test.*
 
 class RectangleColliderTest {
 
-    private val square10 = _root_ide_package_.org.soyuz.engine.collision.RectangleCollider(RectangleShape(10.0, 10.0))
-    private val square20 = _root_ide_package_.org.soyuz.engine.collision.RectangleCollider(RectangleShape(20.0, 20.0))
-    private val wideRect = _root_ide_package_.org.soyuz.engine.collision.RectangleCollider(RectangleShape(30.0, 10.0))
-    private val smallCircle = _root_ide_package_.org.soyuz.engine.collision.CircleCollider(CircleShape(5.0))
-    private val bigCircle = _root_ide_package_.org.soyuz.engine.collision.CircleCollider(CircleShape(15.0))
+    private val square10 = RectangleCollider(RectangleShape(10.0, 10.0))
+    private val square20 = RectangleCollider(RectangleShape(20.0, 20.0))
+    private val wideRect = RectangleCollider(RectangleShape(30.0, 10.0))
+    private val smallCircle = CircleCollider(CircleShape(5.0))
+    private val bigCircle = CircleCollider(CircleShape(15.0))
     private val identity = Transform()
 
     // ==================== rect-rect (SAT) ====================
@@ -214,8 +214,7 @@ class RectangleColliderTest {
 
     @Test
     fun `trigger flag can be set`() {
-        val trigger =
-            _root_ide_package_.org.soyuz.engine.collision.RectangleCollider(RectangleShape(5.0, 5.0), isTrigger = true)
+        val trigger = RectangleCollider(RectangleShape(5.0, 5.0), isTrigger = true)
         assertTrue(trigger.isTrigger)
     }
 }

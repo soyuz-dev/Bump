@@ -1,4 +1,4 @@
-package org.soyuz.org.soyuz.engine.shape
+package org.soyuz.engine.shape
 
 import org.soyuz.util.math.Transform
 import org.soyuz.util.ShapeQueries

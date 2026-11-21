@@ -1,4 +1,4 @@
-package org.soyuz.org.soyuz.math
+package org.soyuz.util.math
 
 import kotlin.test.Test
 import kotlin.test.assertEquals

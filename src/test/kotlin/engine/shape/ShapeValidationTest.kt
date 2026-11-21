@@ -1,4 +1,4 @@
-package org.soyuz.org.soyuz.engine.shape
+package org.soyuz.engine.shape
 
 import kotlin.test.Test
 import kotlin.test.assertFailsWith

@@ -1,12 +1,11 @@
-package org.soyuz.org.soyuz.engine.behaviour
 
-import org.soyuz.engine.behaviour.routeCollisions
+package org.soyuz.engine.behaviour
+
 import org.soyuz.engine.entity.DefaultGameEntity
 import org.soyuz.engine.events.CollisionEvent
 import org.soyuz.engine.events.CollisionEventType
 import org.soyuz.engine.events.RuntimeEventBus
 import org.soyuz.engine.scene.RuntimeScene
-import kotlin.collections.plusAssign
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -76,7 +75,7 @@ class CollisionEventRoutingTest {
         val types = mutableListOf<CollisionEventType>()
 
         scene.onCollisionEvent {
-            types plusAssign it.type
+            types += it.type
         }
 
         for (type in CollisionEventType.entries) {
@@ -151,7 +150,7 @@ class CollisionEventRoutingTest {
         val scene = scene("game")
         val calls = mutableListOf<Int>()
 
-        lateinit var second: org.soyuz.engine.behaviour.Subscription
+        lateinit var second: Subscription
 
         scene.onCollisionEvent {
             calls += 1

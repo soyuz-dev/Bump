@@ -1,4 +1,4 @@
-package org.soyuz.org.soyuz.engine.collision
+package org.soyuz.engine.collision
 
 import org.soyuz.util.math.Transform
 import org.soyuz.engine.shape.CircleShape
@@ -7,9 +7,9 @@ import kotlin.test.*
 
 class CircleColliderTest {
 
-    private val smallCircle = _root_ide_package_.org.soyuz.engine.collision.CircleCollider(CircleShape(10.0))
-    private val bigCircle = _root_ide_package_.org.soyuz.engine.collision.CircleCollider(CircleShape(20.0))
-    private val tinyCircle = _root_ide_package_.org.soyuz.engine.collision.CircleCollider(CircleShape(1.0))
+    private val smallCircle = CircleCollider(CircleShape(10.0))
+    private val bigCircle = CircleCollider(CircleShape(20.0))
+    private val tinyCircle = CircleCollider(CircleShape(1.0))
 
     private val identity = Transform()
 
@@ -185,7 +185,7 @@ class CircleColliderTest {
 
     @Test
     fun `trigger flag can be set`() {
-        val trigger = _root_ide_package_.org.soyuz.engine.collision.CircleCollider(CircleShape(5.0), isTrigger = true)
+        val trigger = CircleCollider(CircleShape(5.0), isTrigger = true)
         assertTrue(trigger.isTrigger)
     }
 }

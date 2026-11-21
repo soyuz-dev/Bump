@@ -1,4 +1,4 @@
-package org.soyuz.org.soyuz.engine.physics.joints
+package org.soyuz.engine.physics.joints
 
 import org.soyuz.engine.physics.PointMass
 import org.soyuz.util.math.Vector2D

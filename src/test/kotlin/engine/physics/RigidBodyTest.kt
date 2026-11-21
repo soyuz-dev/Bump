@@ -1,4 +1,4 @@
-package org.soyuz.org.soyuz.engine.physics
+package org.soyuz.engine.physics
 
 import org.soyuz.util.math.Vector2D
 import kotlin.test.*

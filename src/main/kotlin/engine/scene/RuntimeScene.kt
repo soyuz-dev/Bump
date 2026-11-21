@@ -4,6 +4,7 @@ package org.soyuz.engine.scene
 import org.soyuz.engine.behaviour.CallbackSubscription
 import org.soyuz.engine.behaviour.SceneKeyboardDispatcher
 import org.soyuz.engine.behaviour.Subscription
+import org.soyuz.engine.behaviour.routeCollisions
 import org.soyuz.engine.entity.GameEntity
 import org.soyuz.engine.events.CollisionEvent
 import org.soyuz.engine.events.CollisionEventType
@@ -26,15 +27,31 @@ open class RuntimeScene(
     var physicsContext: ScenePhysicsContext? = null
         private set
 
+    private var collisionRouting: Subscription? = null
+
+
     fun attachPhysics(context: ScenePhysicsContext) {
         check(physicsContext == null) {
             "Scene '$id' already has a physics context"
         }
 
         physicsContext = context
+        collisionRouting = context.eventBus.routeCollisions {
+            this
+        }
     }
 
+
     final override fun addEntity(entity: GameEntity) {
+        val existing = entities[entity.id]
+
+        if (physicsContext != null) {
+            require(existing == null || existing === entity) {
+                "Entity '${entity.id}' already exists " +
+                        "in scene '$id'"
+            }
+        }
+
         val previous = entities.put(entity.id, entity)
 
         if (previous != null && previous !== entity) {
@@ -45,6 +62,10 @@ open class RuntimeScene(
     final override fun removeEntity(entityId: String) {
         val entity = entities.remove(entityId) ?: return
         keyboard.cancelOwnedBy(entity)
+        physicsContext?.let { context ->
+            context.physicsSystem.unregisterBody(entityId)
+            context.collisionSystem.unregisterCollider(entityId)
+        }
     }
 
     final override fun findEntity(
@@ -106,15 +127,24 @@ open class RuntimeScene(
         alpha: Float
     ) = Unit
 
+
     override fun cleanup() {
+        entities.keys.toList().forEach { entityId ->
+            removeEntity(entityId)
+        }
+
         keyboard.clear()
 
         collisionCallbacks
             .map { it.first }
             .forEach { it.cancel() }
 
-        entities.clear()
+        collisionRouting?.cancel()
+        collisionRouting = null
+
+        physicsContext = null
     }
+
 
     override fun onCollisionEvent(
         callback: (CollisionEvent) -> Unit

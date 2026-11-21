@@ -46,8 +46,19 @@ class RuntimePhysicsSystem(
         bodyToEntity[body] = entityId
     }
 
+
     override fun unregisterBody(entityId: String) {
-        bodies.remove(entityId)?.let { bodyToEntity.remove(it) }
+        bodies.remove(entityId)?.let { body ->
+            bodyToEntity.remove(body)
+        }
+
+        previousContacts.removeAll { pair ->
+            pair.first == entityId || pair.second == entityId
+        }
+
+        ccdContacts.removeAll { pair ->
+            pair.first == entityId || pair.second == entityId
+        }
     }
 
     override fun step(scene: Scene, dt: Double) {

@@ -4,6 +4,7 @@ package org.soyuz.engine.dsl
 import org.soyuz.engine.core.RuntimeEngine
 import org.soyuz.engine.collision.CollisionSystem
 import org.soyuz.engine.physics.PhysicsSystem
+import org.soyuz.engine.physics.ScenePhysicsContext
 import org.soyuz.engine.render.Camera
 import org.soyuz.engine.scene.RuntimeScene
 import org.soyuz.windowing.Window
@@ -30,22 +31,31 @@ class WindowScope internal constructor(
         }
 
         val scene = RuntimeScene(id)
+        val physics = ScenePhysicsContext.create()
 
-        SceneScope(
-            scene = scene,
-            engine = engine,
-            physicsSystem = physicsSystem,
-            collisionSystem = collisionSystem
-        ).configure()
+        scene.attachPhysics(physics)
 
-        scenes[id] = scene
+        try {
+            SceneScope(
+                scene = scene,
+                engine = engine,
+                physicsSystem = physics.physicsSystem,
+                collisionSystem = physics.collisionSystem
+            ).configure()
 
-        if (initialSceneId == null) {
-            initialSceneId = id
+            scenes[id] = scene
+
+            if (initialSceneId == null) {
+                initialSceneId = id
+            }
+
+            return scene
+        } catch (failure: Throwable) {
+            scene.cleanup()
+            throw failure
         }
-
-        return scene
     }
+
 
     fun startWith(sceneId: String) {
         initialSceneId = sceneId

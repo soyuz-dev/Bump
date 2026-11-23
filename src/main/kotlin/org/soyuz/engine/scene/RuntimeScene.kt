@@ -4,6 +4,8 @@ package org.soyuz.engine.scene
 import org.soyuz.engine.behaviour.CallbackSubscription
 import org.soyuz.engine.behaviour.SceneKeyboardDispatcher
 import org.soyuz.engine.behaviour.Subscription
+import org.soyuz.engine.behaviour.BehaviourScope
+import org.soyuz.engine.behaviour.BehaviourScheduler
 import org.soyuz.engine.behaviour.routeCollisions
 import org.soyuz.engine.entity.GameEntity
 import org.soyuz.engine.events.CollisionEvent
@@ -22,6 +24,7 @@ open class RuntimeScene(
 
     private val keyboard = SceneKeyboardDispatcher()
     private val timerScheduler = TimerScheduler()
+    private val behaviours = BehaviourScheduler(timerScheduler)
 
     private val collisionCallbacks =
         mutableListOf<Pair<Subscription, (CollisionEvent) -> Unit>>()
@@ -59,6 +62,7 @@ open class RuntimeScene(
 
         if (previous != null && previous !== entity) {
             keyboard.cancelOwnedBy(previous)
+            behaviours.cancelOwnedBy(previous)
             timerScheduler.cancelOwnedBy(previous)
         }
     }
@@ -66,6 +70,7 @@ open class RuntimeScene(
     final override fun removeEntity(entityId: String) {
         val entity = entities.remove(entityId) ?: return
         keyboard.cancelOwnedBy(entity)
+        behaviours.cancelOwnedBy(entity)
         timerScheduler.cancelOwnedBy(entity)
         physicsContext?.let { context ->
             context.physicsSystem.unregisterBody(entityId)
@@ -132,7 +137,12 @@ open class RuntimeScene(
     }
 
     override fun updateTimers(elapsed: Duration, shouldContinue: () -> Boolean) {
-        timerScheduler.update(elapsed, shouldContinue)
+        behaviours.update(elapsed, shouldContinue)
+    }
+
+    override fun launch(owner: GameEntity?, block: suspend BehaviourScope.() -> Unit): Subscription {
+        validateOwner(owner)
+        return behaviours.launch(owner, block)
     }
 
     private fun validateOwner(owner: GameEntity?) {
@@ -158,6 +168,7 @@ open class RuntimeScene(
 
 
     override fun cleanup() {
+        behaviours.clear()
         timerScheduler.clear()
         entities.keys.toList().forEach { entityId ->
             removeEntity(entityId)

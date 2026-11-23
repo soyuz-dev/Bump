@@ -31,6 +31,7 @@ val lwjglNatives = when {
 
 dependencies {
     testImplementation(kotlin("test"))
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 
     implementation("org.lwjgl:lwjgl:$lwjglV")
     implementation("org.lwjgl:lwjgl-glfw:$lwjglV")

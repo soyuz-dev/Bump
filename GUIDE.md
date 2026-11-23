@@ -588,7 +588,7 @@ engine.during(500.milliseconds) { progress ->
 }
 ```
 
-Frame callbacks still receive `dt` as a `Double` in seconds; `during` receives normalized `Double` progress from 0 to 1. Delays must be finite and non-negative; repeating intervals and `during` durations must be finite and positive. A zero delay is deferred rather than executed inline. Coroutine-based `wait(Duration)` behaviour is planned, but not part of v1.6-alpha.
+Frame callbacks still receive `dt` as a `Double` in seconds; `during` receives normalized `Double` progress from 0 to 1. Delays must be finite and non-negative; repeating intervals and `during` durations must be finite and positive. A zero delay is deferred rather than executed inline.
 
 All four timer methods return a `Subscription`, including the `engine { ... }` shorthand:
 
@@ -630,6 +630,40 @@ Entity timer callbacks receive their `GameEntity` as the receiver, just like ent
 Registration is deferred until entity configuration and registration succeed. Returned handles can be cancelled before installation, reflect completion afterward, and are cancelled if construction fails. Entity callbacks can register further timers after installation; those timers still start on the next scheduler update. Durations are validated during configuration. The scene API also accepts `owner = entity` for runtime registration and requires that exact entity instance to belong to the scene.
 
 `TimerScheduler` in `org.soyuz.engine.timing` owns timer storage and execution independently of the engine. Registrations made before an update start accumulating in that update; registrations made inside callbacks wait until the next update. This applies to `everyFrame` too. A zero elapsed duration does not advance or dispatch timers. The scheduler accepts `Duration` in `update`, so it can also be driven without a window. Use it on one thread; recursive updates are rejected. A failing callback cancels its timer and propagates the exception, leaving later timers unadvanced for that update.
+
+### Coroutine Behaviours
+
+Use `launch` in scene and entity scopes for sequential behaviour with suspending waits:
+
+```kotlin
+scene("game") {
+    val game = scene
+
+    launch {
+        wait(2.seconds)
+        println("Round started")
+    }
+
+    entity("bomb") {
+        launch {
+            wait(2.seconds)
+            println("$id armed")
+            wait(1.seconds)
+            game.removeEntity(id)
+        }
+    }
+}
+```
+
+`launch` returns a `Subscription`. Its body starts on the next positive update of its active scene. Entity launches are installed only after successful entity construction, and can be cancelled before installation or before their first update. Entity behaviours expose their entity's `GameEntity` properties and methods, plus `entity` and `wait`.
+
+`wait(Duration)` suspends without blocking the engine thread and uses the scene's simulation time. Inactive scenes preserve the remaining wait. Each wait starts accumulating on the update after it suspends; excess time from a completed wait is not carried into the next wait. `wait(Duration.ZERO)` yields until the next positive scene update. Negative or infinite waits fail when the behaviour reaches them. Use `wait` for gameplay timing; `kotlinx.coroutines.delay` uses its own clock.
+
+Normal coroutine resumptions are processed on the engine thread while the scene is active. Resumptions arriving outside updates queue until the next active update. Switching scenes stops further timer and coroutine dispatch for the old scene in that update. Running coroutine code continues until it returns or suspends, so cancellation is cooperative.
+
+Cancelling the subscription, removing or replacing an entity, or cleaning up a scene cancels its behaviours and pending waits. Non-suspending `finally` blocks run on the engine thread even when the scene is inactive. Standard structured children created with `kotlinx.coroutines.coroutineScope` are cancelled with their parent. Each DSL `launch` is an independent behaviour with the enclosing scene or entity as its owner.
+
+Uncaught failures cancel the failing behaviour and propagate from an active scene update; they do not cancel sibling behaviours. Cancellation cleanup failures are reported through an active scene update as well. Registration, cancellation, and scene updates belong on the engine thread. Coroutine support uses `kotlinx-coroutines-core`; it does not create a background simulation thread.
 
 ---
 

@@ -3,6 +3,8 @@ package org.soyuz
 import org.lwjgl.glfw.GLFW.*
 import org.soyuz.engine.dsl.*
 import org.soyuz.engine.render.SolidColor
+import org.soyuz.engine.render.text.Font
+import org.soyuz.engine.render.text.TextPainter
 import org.soyuz.engine.shape.CircleShape
 import org.soyuz.engine.shape.RectangleShape
 import org.soyuz.engine.shape.TriangleShape
@@ -12,6 +14,7 @@ import org.soyuz.util.math.Vector2D
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.time.Duration.Companion.seconds
 
 fun main() = bump {
     window("Bump - MultiScene DSL", 800, 600) {
@@ -41,6 +44,7 @@ fun main() = bump {
                     painter = SolidColor(colors[i])
                 }
             }
+            coroutineDemo(font)
         }
 
         // Scene 2: Rectangles
@@ -63,6 +67,7 @@ fun main() = bump {
                     )
                 }
             }
+            coroutineDemo(font)
         }
 
         // Scene 3: Triangles
@@ -85,6 +90,7 @@ fun main() = bump {
                     )
                 }
             }
+            coroutineDemo(font)
         }
 
         // Scene-specific UI
@@ -162,4 +168,87 @@ fun main() = bump {
                         (1.0 / dt).toInt()
         }
     }
+}
+
+private fun SceneScope.coroutineDemo(font: Font) {
+    val current = scene
+
+    fun statusLine(id: String, y: Double, initial: String, fontSize: Float = 16f): (String) -> Unit {
+        val label = engine.ui.label(id, 400.0, y, initial, font, fontSize, Color(230, 230, 230))
+        current.addEntity(label)
+        val text = label.painter as TextPainter
+        return { value ->
+            text.text = value
+            text.update(0f)
+            label.shape = RectangleShape(
+                text.texture?.width?.toDouble() ?: 1.0,
+                text.texture?.height?.toDouble() ?: 1.0
+            )
+        }
+    }
+
+    val clockStatus = statusLine("coroutine_clock_status", 475.0, "Scene clock: 0s")
+    val probeStatus = statusLine("coroutine_probe_status", 505.0, "Probe waiting to start")
+    statusLine(
+        "coroutine_controls",
+        560.0,
+        "1/2/3: scenes | C: stop clock | X: remove probe | R: respawn | Esc: quit",
+        14f
+    )
+
+    var activeSeconds = 0
+    val clock = launch {
+        try {
+            while (true) {
+                wait(1.seconds)
+                activeSeconds++
+                clockStatus("Scene clock: ${activeSeconds}s")
+            }
+        } finally {
+            clockStatus("Scene clock stopped at ${activeSeconds}s")
+            println("[${current.id}] Scene clock cancelled at ${activeSeconds}s")
+        }
+    }
+
+    var generation = 0
+    var cleanups = 0
+
+    fun spawnProbe() {
+        current.removeEntity("coroutine_probe")
+        val number = ++generation
+        probeStatus("Probe #$number: waiting 2s | Cleanups: $cleanups")
+
+        entity("coroutine_probe") {
+            position = Vector2D(180.0, 440.0)
+            shape = CircleShape(14.0)
+            painter = SolidColor(Color(80, 220, 255))
+
+            launch {
+                var step = 0
+                try {
+                    while (true) {
+                        wait(2.seconds)
+                        step++
+                        transform = transform.copy(
+                            position = Vector2D(180.0 + (step % 6) * 88.0, 440.0)
+                        )
+                        painter = SolidColor(
+                            if (step % 2 == 0) Color(80, 220, 255) else Color(255, 180, 60)
+                        )
+                        probeStatus("Probe #$number: step $step | Cleanups: $cleanups")
+                    }
+                } finally {
+                    cleanups++
+                    probeStatus("Probe #$number cancelled | Cleanups: $cleanups")
+                    println("[${current.id}] Probe #$number cancelled at step $step; cleanups: $cleanups")
+                }
+            }
+        }
+    }
+
+    spawnProbe()
+
+    onKeyDown(GLFW_KEY_C) { clock.cancel() }
+    onKeyDown(GLFW_KEY_X) { current.removeEntity("coroutine_probe") }
+    onKeyDown(GLFW_KEY_R) { spawnProbe() }
 }

@@ -3,6 +3,7 @@ package org.soyuz.engine.dsl
 
 import org.soyuz.engine.behaviour.DeferredSubscription
 import org.soyuz.engine.behaviour.Subscription
+import org.soyuz.engine.behaviour.EntityBehaviourScope
 import org.soyuz.engine.collision.Collider
 import org.soyuz.engine.collision.CollisionSystem
 import org.soyuz.engine.entity.DefaultGameEntity
@@ -68,12 +69,12 @@ class EntityScope internal constructor(
     private val behaviour =
         mutableListOf<(RuntimeScene) -> Unit>()
 
-    private class PendingTimer(
+    private class PendingRegistration(
         val subscription: DeferredSubscription,
         val register: (RuntimeScene) -> Subscription
     )
 
-    private val pendingTimers = mutableListOf<PendingTimer>()
+    private val pendingRegistrations = mutableListOf<PendingRegistration>()
     private var installedScene: RuntimeScene? = null
     private var discarded = false
 
@@ -81,7 +82,7 @@ class EntityScope internal constructor(
         require(delay.isFinite() && delay >= Duration.ZERO) {
             "Timer delay must be finite and non-negative."
         }
-        return registerTimer { scene ->
+        return registerBehaviour { scene ->
             scene.after(delay, owner = entity) { callback(entity) }
         }
     }
@@ -90,7 +91,7 @@ class EntityScope internal constructor(
         require(duration.isFinite() && duration > Duration.ZERO) {
             "Timer duration must be finite and positive."
         }
-        return registerTimer { scene ->
+        return registerBehaviour { scene ->
             scene.during(duration, owner = entity) { callback(entity, it) }
         }
     }
@@ -99,20 +100,24 @@ class EntityScope internal constructor(
         require(interval.isFinite() && interval > Duration.ZERO) {
             "Timer interval must be finite and positive."
         }
-        return registerTimer { scene ->
+        return registerBehaviour { scene ->
             scene.forEvery(interval, owner = entity) { callback(entity) }
         }
     }
 
-    fun everyFrame(callback: GameEntity.(dt: Double) -> Unit): Subscription = registerTimer { scene ->
+    fun everyFrame(callback: GameEntity.(dt: Double) -> Unit): Subscription = registerBehaviour { scene ->
         scene.everyFrame(owner = entity) { callback(entity, it) }
     }
 
-    private fun registerTimer(register: (RuntimeScene) -> Subscription): Subscription {
+    fun launch(block: suspend EntityBehaviourScope.() -> Unit): Subscription = registerBehaviour { scene ->
+        scene.launch(owner = entity) { block(EntityBehaviourScope(entity, this)) }
+    }
+
+    private fun registerBehaviour(register: (RuntimeScene) -> Subscription): Subscription {
         check(!discarded) { "Entity configuration has been discarded." }
         installedScene?.let { return register(it) }
         val subscription = DeferredSubscription()
-        pendingTimers += PendingTimer(subscription, register)
+        pendingRegistrations += PendingRegistration(subscription, register)
         return subscription
     }
 
@@ -192,14 +197,14 @@ class EntityScope internal constructor(
         check(!discarded && installedScene == null) { "Entity behaviour cannot be installed again." }
         try {
             behaviour.forEach { register -> register(scene) }
-            pendingTimers.forEach { timer ->
-                if (timer.subscription.isActive) {
-                    timer.subscription.bind(timer.register(scene))
+            pendingRegistrations.forEach { pending ->
+                if (pending.subscription.isActive) {
+                    pending.subscription.bind(pending.register(scene))
                 }
             }
             installedScene = scene
             behaviour.clear()
-            pendingTimers.clear()
+            pendingRegistrations.clear()
         } catch (failure: Throwable) {
             discard()
             throw failure
@@ -208,8 +213,8 @@ class EntityScope internal constructor(
 
     internal fun discard() {
         discarded = true
-        pendingTimers.forEach { it.subscription.cancel() }
-        pendingTimers.clear()
+        pendingRegistrations.forEach { it.subscription.cancel() }
+        pendingRegistrations.clear()
         behaviour.clear()
     }
 }

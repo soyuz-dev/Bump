@@ -28,22 +28,21 @@ class SceneScope internal constructor(
         val entity = DefaultGameEntity(id)
         val scope = EntityScope(entity)
 
-        scope.configure()
-
-        // An entity is registered only after configuration
-        // has successfully completed.
-        scene.addEntity(entity)
-
         try {
+            scope.configure()
+            scene.addEntity(entity)
             scope.installPhysics(
                 physicsSystem,
                 collisionSystem
             )
             scope.installBehaviour(scene)
         } catch (failure: Throwable) {
-            physicsSystem.unregisterBody(id)
-            collisionSystem.unregisterCollider(id)
-            scene.removeEntity(id)
+            scope.discard()
+            if (scene.findEntity(id) === entity) {
+                physicsSystem.unregisterBody(id)
+                collisionSystem.unregisterCollider(id)
+                scene.removeEntity(id)
+            }
             throw failure
         }
 
@@ -70,14 +69,14 @@ class SceneScope internal constructor(
     ): Subscription = scene.onCollisionEvent(callback)
 
     fun after(delay: Duration, callback: () -> Unit): Subscription =
-        scene.after(delay, callback)
+        scene.after(delay, callback = callback)
 
     fun during(duration: Duration, callback: (progress: Double) -> Unit): Subscription =
-        scene.during(duration, callback)
+        scene.during(duration, callback = callback)
 
     fun forEvery(interval: Duration, callback: () -> Unit): Subscription =
-        scene.forEvery(interval, callback)
+        scene.forEvery(interval, callback = callback)
 
     fun everyFrame(callback: (dt: Double) -> Unit): Subscription =
-        scene.everyFrame(callback)
+        scene.everyFrame(callback = callback)
 }

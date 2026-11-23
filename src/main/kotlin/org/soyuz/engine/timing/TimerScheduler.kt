@@ -11,6 +11,7 @@ class TimerScheduler {
     private class Timer(
         val interval: Duration,
         val type: TimerType,
+        val owner: Any?,
         val subscription: Subscription,
         val callback: (Double) -> Unit,
         var accumulator: Duration = Duration.ZERO
@@ -20,40 +21,53 @@ class TimerScheduler {
     private val pendingTimers = mutableListOf<Timer>()
     private var updating = false
 
-    fun after(delay: Duration, callback: () -> Unit): Subscription {
+    fun after(delay: Duration, callback: () -> Unit): Subscription =
+        after(delay, null, callback)
+
+    internal fun after(delay: Duration, owner: Any?, callback: () -> Unit): Subscription {
         require(delay.isFinite() && delay >= Duration.ZERO) {
             "Timer delay must be finite and non-negative."
         }
-        return register(delay, TimerType.ONE_SHOT) { callback() }
+        return register(delay, TimerType.ONE_SHOT, owner) { callback() }
     }
 
-    fun during(duration: Duration, callback: (progress: Double) -> Unit): Subscription {
+    fun during(duration: Duration, callback: (progress: Double) -> Unit): Subscription =
+        during(duration, null, callback)
+
+    internal fun during(duration: Duration, owner: Any?, callback: (Double) -> Unit): Subscription {
         require(duration.isFinite() && duration > Duration.ZERO) {
             "Timer duration must be finite and positive."
         }
-        return register(duration, TimerType.DURING, callback)
+        return register(duration, TimerType.DURING, owner, callback)
     }
 
-    fun forEvery(interval: Duration, callback: () -> Unit): Subscription {
+    fun forEvery(interval: Duration, callback: () -> Unit): Subscription =
+        forEvery(interval, null, callback)
+
+    internal fun forEvery(interval: Duration, owner: Any?, callback: () -> Unit): Subscription {
         require(interval.isFinite() && interval > Duration.ZERO) {
             "Timer interval must be finite and positive."
         }
-        return register(interval, TimerType.INTERVAL) { callback() }
+        return register(interval, TimerType.INTERVAL, owner) { callback() }
     }
 
     fun everyFrame(callback: (dt: Double) -> Unit): Subscription =
-        register(Duration.ZERO, TimerType.FOREVER, callback)
+        everyFrame(null, callback)
+
+    internal fun everyFrame(owner: Any?, callback: (Double) -> Unit): Subscription =
+        register(Duration.ZERO, TimerType.FOREVER, owner, callback)
 
     private fun register(
         interval: Duration,
         type: TimerType,
+        owner: Any?,
         callback: (Double) -> Unit
     ): Subscription {
         val subscription = CallbackSubscription { cancelled ->
             timers.removeAll { it.subscription === cancelled }
             pendingTimers.removeAll { it.subscription === cancelled }
         }
-        pendingTimers += Timer(interval, type, subscription, callback)
+        pendingTimers += Timer(interval, type, owner, subscription, callback)
         return subscription
     }
 
@@ -111,6 +125,12 @@ class TimerScheduler {
         } finally {
             updating = false
         }
+    }
+
+    internal fun cancelOwnedBy(owner: Any) {
+        (timers + pendingTimers)
+            .filter { it.owner === owner }
+            .forEach { it.subscription.cancel() }
     }
 
     /** Cancels active and pending timers. The scheduler can be reused afterward. */

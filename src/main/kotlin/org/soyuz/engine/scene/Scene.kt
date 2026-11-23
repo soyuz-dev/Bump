@@ -38,13 +38,13 @@ interface Scene {
 
     fun dispatchInput(input: Input, dt: Double)
 
-    fun after(delay: Duration, callback: () -> Unit): Subscription
+    fun after(delay: Duration, owner: GameEntity? = null, callback: () -> Unit): Subscription
 
-    fun during(duration: Duration, callback: (progress: Double) -> Unit): Subscription
+    fun during(duration: Duration, owner: GameEntity? = null, callback: (progress: Double) -> Unit): Subscription
 
-    fun forEvery(interval: Duration, callback: () -> Unit): Subscription
+    fun forEvery(interval: Duration, owner: GameEntity? = null, callback: () -> Unit): Subscription
 
-    fun everyFrame(callback: (dt: Double) -> Unit): Subscription
+    fun everyFrame(owner: GameEntity? = null, callback: (dt: Double) -> Unit): Subscription
 
     fun updateTimers(elapsed: Duration, shouldContinue: () -> Boolean = { true })
 

@@ -59,12 +59,14 @@ open class RuntimeScene(
 
         if (previous != null && previous !== entity) {
             keyboard.cancelOwnedBy(previous)
+            timerScheduler.cancelOwnedBy(previous)
         }
     }
 
     final override fun removeEntity(entityId: String) {
         val entity = entities.remove(entityId) ?: return
         keyboard.cancelOwnedBy(entity)
+        timerScheduler.cancelOwnedBy(entity)
         physicsContext?.let { context ->
             context.physicsSystem.unregisterBody(entityId)
             context.collisionSystem.unregisterCollider(entityId)
@@ -109,17 +111,25 @@ open class RuntimeScene(
         keyboard.dispatch(input, dt)
     }
 
-    override fun after(delay: Duration, callback: () -> Unit): Subscription =
-        timerScheduler.after(delay, callback)
+    override fun after(delay: Duration, owner: GameEntity?, callback: () -> Unit): Subscription {
+        validateOwner(owner)
+        return timerScheduler.after(delay, owner, callback)
+    }
 
-    override fun during(duration: Duration, callback: (progress: Double) -> Unit): Subscription =
-        timerScheduler.during(duration, callback)
+    override fun during(duration: Duration, owner: GameEntity?, callback: (progress: Double) -> Unit): Subscription {
+        validateOwner(owner)
+        return timerScheduler.during(duration, owner, callback)
+    }
 
-    override fun forEvery(interval: Duration, callback: () -> Unit): Subscription =
-        timerScheduler.forEvery(interval, callback)
+    override fun forEvery(interval: Duration, owner: GameEntity?, callback: () -> Unit): Subscription {
+        validateOwner(owner)
+        return timerScheduler.forEvery(interval, owner, callback)
+    }
 
-    override fun everyFrame(callback: (dt: Double) -> Unit): Subscription =
-        timerScheduler.everyFrame(callback)
+    override fun everyFrame(owner: GameEntity?, callback: (dt: Double) -> Unit): Subscription {
+        validateOwner(owner)
+        return timerScheduler.everyFrame(owner, callback)
+    }
 
     override fun updateTimers(elapsed: Duration, shouldContinue: () -> Boolean) {
         timerScheduler.update(elapsed, shouldContinue)

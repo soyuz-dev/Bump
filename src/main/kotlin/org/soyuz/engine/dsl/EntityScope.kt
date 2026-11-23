@@ -1,6 +1,8 @@
 
 package org.soyuz.engine.dsl
 
+import org.soyuz.engine.behaviour.DeferredSubscription
+import org.soyuz.engine.behaviour.Subscription
 import org.soyuz.engine.collision.Collider
 import org.soyuz.engine.collision.CollisionSystem
 import org.soyuz.engine.entity.DefaultGameEntity
@@ -13,6 +15,7 @@ import org.soyuz.engine.shape.Shape2D
 import org.soyuz.engine.ui.Interactive
 import org.soyuz.util.math.Transform
 import org.soyuz.util.math.Vector2D
+import kotlin.time.Duration
 
 @BumpDsl
 class EntityScope internal constructor(
@@ -64,6 +67,54 @@ class EntityScope internal constructor(
 
     private val behaviour =
         mutableListOf<(RuntimeScene) -> Unit>()
+
+    private class PendingTimer(
+        val subscription: DeferredSubscription,
+        val register: (RuntimeScene) -> Subscription
+    )
+
+    private val pendingTimers = mutableListOf<PendingTimer>()
+    private var installedScene: RuntimeScene? = null
+    private var discarded = false
+
+    fun after(delay: Duration, callback: GameEntity.() -> Unit): Subscription {
+        require(delay.isFinite() && delay >= Duration.ZERO) {
+            "Timer delay must be finite and non-negative."
+        }
+        return registerTimer { scene ->
+            scene.after(delay, owner = entity) { callback(entity) }
+        }
+    }
+
+    fun during(duration: Duration, callback: GameEntity.(progress: Double) -> Unit): Subscription {
+        require(duration.isFinite() && duration > Duration.ZERO) {
+            "Timer duration must be finite and positive."
+        }
+        return registerTimer { scene ->
+            scene.during(duration, owner = entity) { callback(entity, it) }
+        }
+    }
+
+    fun forEvery(interval: Duration, callback: GameEntity.() -> Unit): Subscription {
+        require(interval.isFinite() && interval > Duration.ZERO) {
+            "Timer interval must be finite and positive."
+        }
+        return registerTimer { scene ->
+            scene.forEvery(interval, owner = entity) { callback(entity) }
+        }
+    }
+
+    fun everyFrame(callback: GameEntity.(dt: Double) -> Unit): Subscription = registerTimer { scene ->
+        scene.everyFrame(owner = entity) { callback(entity, it) }
+    }
+
+    private fun registerTimer(register: (RuntimeScene) -> Subscription): Subscription {
+        check(!discarded) { "Entity configuration has been discarded." }
+        installedScene?.let { return register(it) }
+        val subscription = DeferredSubscription()
+        pendingTimers += PendingTimer(subscription, register)
+        return subscription
+    }
 
     fun physics(configure: PhysicsScope.() -> Unit) {
         val scope = PhysicsScope(
@@ -138,8 +189,27 @@ class EntityScope internal constructor(
     }
 
     internal fun installBehaviour(scene: RuntimeScene) {
-        behaviour.forEach { register ->
-            register(scene)
+        check(!discarded && installedScene == null) { "Entity behaviour cannot be installed again." }
+        try {
+            behaviour.forEach { register -> register(scene) }
+            pendingTimers.forEach { timer ->
+                if (timer.subscription.isActive) {
+                    timer.subscription.bind(timer.register(scene))
+                }
+            }
+            installedScene = scene
+            behaviour.clear()
+            pendingTimers.clear()
+        } catch (failure: Throwable) {
+            discard()
+            throw failure
         }
+    }
+
+    internal fun discard() {
+        discarded = true
+        pendingTimers.forEach { it.subscription.cancel() }
+        pendingTimers.clear()
+        behaviour.clear()
     }
 }

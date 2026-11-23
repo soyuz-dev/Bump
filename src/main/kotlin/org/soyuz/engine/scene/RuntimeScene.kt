@@ -5,6 +5,7 @@ import org.soyuz.engine.behaviour.CallbackSubscription
 import org.soyuz.engine.behaviour.SceneKeyboardDispatcher
 import org.soyuz.engine.behaviour.Subscription
 import org.soyuz.engine.behaviour.BehaviourScope
+import org.soyuz.engine.behaviour.BehaviourHandle
 import org.soyuz.engine.behaviour.BehaviourScheduler
 import org.soyuz.engine.behaviour.routeCollisions
 import org.soyuz.engine.entity.GameEntity
@@ -140,7 +141,7 @@ open class RuntimeScene(
         behaviours.update(elapsed, shouldContinue)
     }
 
-    override fun launch(owner: GameEntity?, block: suspend BehaviourScope.() -> Unit): Subscription {
+    override fun launch(owner: GameEntity?, block: suspend BehaviourScope.() -> Unit): BehaviourHandle {
         validateOwner(owner)
         return behaviours.launch(owner, block)
     }

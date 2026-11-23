@@ -3,6 +3,7 @@ package org.soyuz.engine.scene
 
 import org.soyuz.engine.behaviour.Subscription
 import org.soyuz.engine.behaviour.BehaviourScope
+import org.soyuz.engine.behaviour.BehaviourHandle
 import org.soyuz.engine.entity.GameEntity
 import org.soyuz.engine.events.CollisionEvent
 import org.soyuz.input.Input
@@ -47,7 +48,7 @@ interface Scene {
 
     fun everyFrame(owner: GameEntity? = null, callback: (dt: Double) -> Unit): Subscription
 
-    fun launch(owner: GameEntity? = null, block: suspend BehaviourScope.() -> Unit): Subscription
+    fun launch(owner: GameEntity? = null, block: suspend BehaviourScope.() -> Unit): BehaviourHandle
 
     fun updateTimers(elapsed: Duration, shouldContinue: () -> Boolean = { true })
 

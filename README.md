@@ -181,7 +181,7 @@ The DSL is no longer just a bunch of unit tests.
 - **Scene graph:** `Scene`, `RuntimeScene`, persistent scenes for instant switching, scene-owned physics contexts
 - **Observable entities:** Position, rotation, shape fire change listeners
 - **Timer system:** Standalone `TimerScheduler` with `Duration`, cancellable subscriptions, deferred registration, scene-owned timers that pause while inactive, and entity-owned timers cancelled on removal
-- **Coroutine behaviours:** Scene and entity `launch` blocks, simulation-time `wait(Duration)`, engine-thread resumption, and owner cancellation
+- **Coroutine behaviours:** Scene and entity `launch` blocks, simulation-time `wait(Duration)`, awaitable behaviour handles, engine-thread resumption, and owner cancellation
 - **Debug utility:** Zero-overhead logging via `Debug`
 - **Cross-platform:** Windows, Linux, macOS via auto-detected natives
 

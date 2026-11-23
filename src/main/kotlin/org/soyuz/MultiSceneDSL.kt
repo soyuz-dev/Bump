@@ -187,7 +187,7 @@ private fun SceneScope.coroutineDemo(font: Font) {
         }
     }
 
-    val clockStatus = statusLine("coroutine_clock_status", 475.0, "Scene clock: 0s")
+    val clockStatus = statusLine("coroutine_clock_status", 475.0, "Scene clock: awaiting 2s intro")
     val probeStatus = statusLine("coroutine_probe_status", 505.0, "Probe waiting to start")
     statusLine(
         "coroutine_controls",
@@ -197,8 +197,14 @@ private fun SceneScope.coroutineDemo(font: Font) {
     )
 
     var activeSeconds = 0
+    val intro = launch {
+        wait(2.seconds)
+        println("[${current.id}] Intro completed; clock can start")
+    }
     val clock = launch {
         try {
+            intro.await()
+            clockStatus("Scene clock: 0s")
             while (true) {
                 wait(1.seconds)
                 activeSeconds++

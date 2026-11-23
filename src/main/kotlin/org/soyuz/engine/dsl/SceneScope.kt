@@ -3,6 +3,7 @@ package org.soyuz.engine.dsl
 
 import org.soyuz.engine.behaviour.Subscription
 import org.soyuz.engine.behaviour.BehaviourScope
+import org.soyuz.engine.behaviour.BehaviourHandle
 import org.soyuz.engine.collision.CollisionSystem
 import org.soyuz.engine.core.RuntimeEngine
 import org.soyuz.engine.entity.DefaultGameEntity
@@ -81,6 +82,6 @@ class SceneScope internal constructor(
     fun everyFrame(callback: (dt: Double) -> Unit): Subscription =
         scene.everyFrame(callback = callback)
 
-    fun launch(block: suspend BehaviourScope.() -> Unit): Subscription =
+    fun launch(block: suspend BehaviourScope.() -> Unit): BehaviourHandle =
         scene.launch(block = block)
 }

@@ -4,6 +4,8 @@ package org.soyuz.engine.dsl
 import org.soyuz.engine.behaviour.DeferredSubscription
 import org.soyuz.engine.behaviour.Subscription
 import org.soyuz.engine.behaviour.EntityBehaviourScope
+import org.soyuz.engine.behaviour.BehaviourHandle
+import org.soyuz.engine.behaviour.DeferredBehaviourHandle
 import org.soyuz.engine.collision.Collider
 import org.soyuz.engine.collision.CollisionSystem
 import org.soyuz.engine.entity.DefaultGameEntity
@@ -70,8 +72,8 @@ class EntityScope internal constructor(
         mutableListOf<(RuntimeScene) -> Unit>()
 
     private class PendingRegistration(
-        val subscription: DeferredSubscription,
-        val register: (RuntimeScene) -> Subscription
+        val subscription: Subscription,
+        val install: (RuntimeScene) -> Unit
     )
 
     private val pendingRegistrations = mutableListOf<PendingRegistration>()
@@ -109,15 +111,22 @@ class EntityScope internal constructor(
         scene.everyFrame(owner = entity) { callback(entity, it) }
     }
 
-    fun launch(block: suspend EntityBehaviourScope.() -> Unit): Subscription = registerBehaviour { scene ->
-        scene.launch(owner = entity) { block(EntityBehaviourScope(entity, this)) }
+    fun launch(block: suspend EntityBehaviourScope.() -> Unit): BehaviourHandle {
+        check(!discarded) { "Entity configuration has been discarded." }
+        val register: (RuntimeScene) -> BehaviourHandle = { scene ->
+            scene.launch(owner = entity) { block(EntityBehaviourScope(entity, this)) }
+        }
+        installedScene?.let { return register(it) }
+        val handle = DeferredBehaviourHandle()
+        pendingRegistrations += PendingRegistration(handle) { scene -> handle.bind(register(scene)) }
+        return handle
     }
 
     private fun registerBehaviour(register: (RuntimeScene) -> Subscription): Subscription {
         check(!discarded) { "Entity configuration has been discarded." }
         installedScene?.let { return register(it) }
         val subscription = DeferredSubscription()
-        pendingRegistrations += PendingRegistration(subscription, register)
+        pendingRegistrations += PendingRegistration(subscription) { scene -> subscription.bind(register(scene)) }
         return subscription
     }
 
@@ -199,7 +208,7 @@ class EntityScope internal constructor(
             behaviour.forEach { register -> register(scene) }
             pendingRegistrations.forEach { pending ->
                 if (pending.subscription.isActive) {
-                    pending.subscription.bind(pending.register(scene))
+                    pending.install(scene)
                 }
             }
             installedScene = scene

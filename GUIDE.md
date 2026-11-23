@@ -655,7 +655,25 @@ scene("game") {
 }
 ```
 
-`launch` returns a `Subscription`. Its body starts on the next positive update of its active scene. Entity launches are installed only after successful entity construction, and can be cancelled before installation or before their first update. Entity behaviours expose their entity's `GameEntity` properties and methods, plus `entity` and `wait`.
+`launch` returns a `BehaviourHandle`, which also implements `Subscription`. Its body starts on the next positive update of its active scene. Entity launches are installed only after successful entity construction, and can be cancelled before installation or before their first update. Entity behaviours expose their entity's `GameEntity` properties and methods, plus `entity` and `wait`.
+
+Use `await()` inside another coroutine to wait for a behaviour's full completion, including its cleanup and structured children:
+
+```kotlin
+val intro = launch {
+    wait(2.seconds)
+    println("Intro complete")
+}
+
+launch {
+    intro.await()
+    println("Round started")
+}
+```
+
+Successful completion returns `Unit`. Failure throws the original exception from `await()`, and target cancellation throws `CancellationException`. Cancelling a waiter does not cancel its target. Multiple behaviours can await the same handle, and awaiting an already completed handle returns its stored outcome. Awaiting does not start a behaviour early; entity handles can be awaited before installation, and failed construction or cancellation releases those waiters. Awaiting yourself or a coroutine ancestor is rejected.
+
+A behaviour already awaiting a target can catch its failure without the engine reporting that failure again. If the waiter leaves it uncaught, the failure is reported through the waiter. A target failure with no active waiter is reported through its scene update as before; a failure already reported cannot be retroactively handled by a later await. A waiter in an inactive scene resumes only when that scene is active again.
 
 `wait(Duration)` suspends without blocking the engine thread and uses the scene's simulation time. Inactive scenes preserve the remaining wait. Each wait starts accumulating on the update after it suspends; excess time from a completed wait is not carried into the next wait. `wait(Duration.ZERO)` yields until the next positive scene update. Negative or infinite waits fail when the behaviour reaches them. Use `wait` for gameplay timing; `kotlinx.coroutines.delay` uses its own clock.
 
@@ -663,7 +681,7 @@ Normal coroutine resumptions are processed on the engine thread while the scene 
 
 Cancelling the subscription, removing or replacing an entity, or cleaning up a scene cancels its behaviours and pending waits. Non-suspending `finally` blocks run on the engine thread even when the scene is inactive. Standard structured children created with `kotlinx.coroutines.coroutineScope` are cancelled with their parent. Each DSL `launch` is an independent behaviour with the enclosing scene or entity as its owner.
 
-Uncaught failures cancel the failing behaviour and propagate from an active scene update; they do not cancel sibling behaviours. Cancellation cleanup failures are reported through an active scene update as well. Registration, cancellation, and scene updates belong on the engine thread. Coroutine support uses `kotlinx-coroutines-core`; it does not create a background simulation thread.
+Unobserved failures cancel the failing behaviour and propagate from an active scene update; they do not cancel sibling behaviours. Failures with active waiters are delivered through `await()`. Cancellation cleanup failures follow the same reporting rules. Registration, cancellation, and scene updates belong on the engine thread. Coroutine support uses `kotlinx-coroutines-core`; it does not create a background simulation thread.
 
 ---
 

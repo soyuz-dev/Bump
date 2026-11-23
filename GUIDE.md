@@ -677,6 +677,23 @@ A behaviour already awaiting a target can catch its failure without the engine r
 
 `wait(Duration)` suspends without blocking the engine thread and uses the scene's simulation time. Inactive scenes preserve the remaining wait. Each wait starts accumulating on the update after it suspends; excess time from a completed wait is not carried into the next wait. `wait(Duration.ZERO)` yields until the next positive scene update. Negative or infinite waits fail when the behaviour reaches them. Use `wait` for gameplay timing; `kotlinx.coroutines.delay` uses its own clock.
 
+`until(Duration) { progress -> ... }` suspends the behaviour while running a non-suspending callback once per active scene update. For example, inside an entity behaviour:
+
+```kotlin
+launch {
+    val start = transform.rotationRadians
+    until(500.milliseconds) { progress ->
+        transform = transform.copy(rotationRadians = start + progress * Math.PI)
+    }
+    wait(1.seconds)
+    println("Rotation finished, then waited one second")
+}
+```
+
+The duration must be finite and positive. Progress begins on the update after `until` suspends, without an immediate zero callback. Successful completion delivers `1.0` exactly once before following coroutine code runs, including when a frame overshoots the duration. Extra elapsed time is not carried into the next operation. Inactive scenes preserve progress. Cancellation or owner removal stops updates and does not force a final value. Callback failures are thrown from `until`, so the surrounding coroutine can catch them; otherwise they follow the behaviour's normal failure and await rules.
+
+In `MultiSceneDSL.kt`, each probe moves with `until(1.seconds)` and rests with `wait(1.seconds)`. Switch scenes during motion to check pause/resume, press X to cancel by removal, and R to respawn without leaving the old motion running.
+
 Normal coroutine resumptions are processed on the engine thread while the scene is active. Resumptions arriving outside updates queue until the next active update. Switching scenes stops further timer and coroutine dispatch for the old scene in that update. Running coroutine code continues until it returns or suspends, so cancellation is cooperative.
 
 Cancelling the subscription, removing or replacing an entity, or cleaning up a scene cancels its behaviours and pending waits. Non-suspending `finally` blocks run on the engine thread even when the scene is inactive. Standard structured children created with `kotlinx.coroutines.coroutineScope` are cancelled with their parent. Each DSL `launch` is an independent behaviour with the enclosing scene or entity as its owner.

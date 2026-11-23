@@ -222,7 +222,7 @@ private fun SceneScope.coroutineDemo(font: Font) {
     fun spawnProbe() {
         current.removeEntity("coroutine_probe")
         val number = ++generation
-        probeStatus("Probe #$number: waiting 2s | Cleanups: $cleanups")
+        probeStatus("Probe #$number: ready to move | Cleanups: $cleanups")
 
         entity("coroutine_probe") {
             position = Vector2D(180.0, 440.0)
@@ -233,15 +233,18 @@ private fun SceneScope.coroutineDemo(font: Font) {
                 var step = 0
                 try {
                     while (true) {
-                        wait(2.seconds)
+                        val start = transform.position
+                        val end = Vector2D(180.0 + ((step + 1) % 6) * 88.0, 440.0)
+                        probeStatus("Probe #$number: moving to step ${step + 1} | Cleanups: $cleanups")
+                        until(1.seconds) { progress ->
+                            transform = transform.copy(position = start + (end - start) * progress)
+                        }
                         step++
-                        transform = transform.copy(
-                            position = Vector2D(180.0 + (step % 6) * 88.0, 440.0)
-                        )
                         painter = SolidColor(
                             if (step % 2 == 0) Color(80, 220, 255) else Color(255, 180, 60)
                         )
-                        probeStatus("Probe #$number: step $step | Cleanups: $cleanups")
+                        probeStatus("Probe #$number: resting at step $step | Cleanups: $cleanups")
+                        wait(1.seconds)
                     }
                 } finally {
                     cleanups++

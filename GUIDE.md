@@ -535,7 +535,7 @@ Audio files go in `src/main/resources/audio/`. OGG Vorbis only. `Application.ini
 An `AudioSource` can also be played from an interaction or timer. For example:
 
 ```kotlin
-engine.forEvery(500.0) {
+engine.forEvery(500.milliseconds) {
     AudioSource().play(Assets.audio("click"))
 }
 ```
@@ -554,6 +554,13 @@ export PULSE_SERVER=unix:/mnt/wslg/PulseServer
 
 The behaviour API doesn't replace the frame loop. You can use both.
 
+Timer delays and intervals use `kotlin.time.Duration`. Import the units used in these examples:
+
+```kotlin
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+```
+
 ```kotlin
 // Every frame
 engine.everyFrame { dt ->
@@ -566,22 +573,22 @@ engine { dt ->
 }
 
 // After a delay (one-shot)
-engine.after(2000.0) {
+engine.after(2.seconds) {
     println("2 seconds passed")
 }
 
 // Repeating interval
-engine.forEvery(1000.0) {
+engine.forEvery(1.seconds) {
     println("Every second")
 }
 
 // For a duration (fires every frame with progress 0..1)
-engine.during(500.0) { progress ->
+engine.during(500.milliseconds) { progress ->
     entity.position = start + (end - start) * progress
 }
 ```
 
-`dt` is in seconds; the timer delay examples above use milliseconds. Coroutine-based `wait(Duration)` behaviour is planned, but not part of v1.6-alpha.
+Frame callbacks still receive `dt` as a `Double` in seconds; `during` receives normalized `Double` progress from 0 to 1. Delays must be finite and non-negative; repeating intervals and `during` durations must be finite and positive. A zero delay is deferred rather than executed inline. Coroutine-based `wait(Duration)` behaviour is planned, but not part of v1.6-alpha.
 
 ---
 
@@ -711,13 +718,13 @@ engine { dt ->
 ### Camera Shake
 
 ```kotlin
-engine.during(500.0) { progress ->
+engine.during(500.milliseconds) { progress ->
     val intensity = (1.0 - progress) * 20.0
     val ox = ((Math.random() - 0.5) * intensity).toFloat()
     val oy = ((Math.random() - 0.5) * intensity).toFloat()
     camera.setPosition(ox, oy)
 }
-engine.after(500.0) {
+engine.after(500.milliseconds) {
     camera.setPosition(0f, 0f)
 }
 ```
@@ -742,7 +749,7 @@ Rotation is centered on the content. Mouse hit-testing converts screen coordinat
 ### Easing Functions
 
 ```kotlin
-engine.during(1000.0) { progress ->
+engine.during(1.seconds) { progress ->
     val eased = Easing.cubicOut(progress)
     entity.position = start + (end - start) * eased
 }
@@ -877,7 +884,7 @@ Bump uses the file extension to decide how to load a file. If the bytes inside d
 | Cancel subscription   | `subscription.cancel()`                                             |
 | Switch scene          | `engine.loadScene(scene)`                                           |
 | Every frame           | `engine { dt -> ... }`                                              |
-| After delay           | `engine.after(ms) { ... }`                                          |
+| After delay           | `engine.after(2.seconds) { ... }`                                   |
 | Load font             | `Assets.font("roboto")`                                             |
 | Load texture          | `Assets.texture("cat")`                                             |
 | Load audio            | `Assets.audio("meow")`                                              |

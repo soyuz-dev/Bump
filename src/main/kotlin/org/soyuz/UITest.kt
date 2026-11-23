@@ -1,5 +1,7 @@
 package org.soyuz
 
+import kotlin.time.Duration.Companion.milliseconds
+
 import org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE
 import org.soyuz.engine.core.Application
 import org.soyuz.engine.core.RuntimeEngine
@@ -101,7 +103,7 @@ fun main() {
     scene.addEntity(nameInputBG)
     scene.addEntity(nameInput)
 
-    engine.forEvery(400.0) {
+    engine.forEvery(400.milliseconds) {
         nameInput.toggleCursor()
     }
 

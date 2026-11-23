@@ -1,5 +1,7 @@
 package org.soyuz
 
+import kotlin.time.Duration.Companion.milliseconds
+
 import org.lwjgl.glfw.GLFW.*
 import org.soyuz.engine.collision.CircleCollider
 import org.soyuz.engine.collision.RuntimeCollisionSystem
@@ -148,9 +150,9 @@ fun main() {
         collisionSystem.registerCollider(id, bulletCollider)
         scene.addEntity(bullet)
 
-        engine.after(200.0) { canShoot = true }
+        engine.after(200.milliseconds) { canShoot = true }
 
-        engine.after(500.0) {
+        engine.after(500.milliseconds) {
             physicsSystem.unregisterBody(id)
             collisionSystem.unregisterCollider(id)
             scene.removeEntity(id)

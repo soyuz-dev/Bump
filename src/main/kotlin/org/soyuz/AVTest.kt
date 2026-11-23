@@ -1,5 +1,8 @@
 package org.soyuz
 
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+
 import org.lwjgl.glfw.GLFW.*
 import org.soyuz.engine.audio.AudioSource
 import org.soyuz.engine.core.Application
@@ -103,14 +106,14 @@ fun main() {
     val playBtn = engine.ui.button("play", width / 2.0, height - 80.0, 200.0, 50.0) {
         println("Play clicked!")
 
-        engine.during(500.0) { progress ->
+        engine.during(500.milliseconds) { progress ->
             val intensity = (1.0 - progress) * 20.0
             val ox = ((Math.random() - 0.5) * intensity).toFloat()
             val oy = ((Math.random() - 0.5) * intensity * 0.2).toFloat()
             camera.setPosition(ox, oy)
         }
 
-        engine.after(500.0) {
+        engine.after(500.milliseconds) {
             camera.setPosition(0f, 0f)
         }
     }
@@ -119,10 +122,10 @@ fun main() {
     // --- Logic Hooks ---
     engine.loadScene(scene)
 
-    engine.forEvery(500.0) {
+    engine.forEvery(500.milliseconds) {
         AudioSource().play(Assets.audio("click"))
     }
-    engine.after(1000.0) {
+    engine.after(1.seconds) {
         AudioSource().play(Assets.audio("meow"))
     }
 

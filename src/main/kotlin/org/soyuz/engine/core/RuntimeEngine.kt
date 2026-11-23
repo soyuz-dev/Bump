@@ -11,6 +11,8 @@ import org.soyuz.engine.ui.UI
 import org.soyuz.input.Input
 import org.soyuz.util.Dynamic
 import org.soyuz.windowing.Window
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 class RuntimeEngine(
     val window: Window,
@@ -34,8 +36,8 @@ class RuntimeEngine(
     private val timers = mutableListOf<Timer>()
 
     private data class Timer(
-        val intervalMs: Double,
-        var accumulator: Double = 0.0,
+        val interval: Duration,
+        var accumulator: Duration = Duration.ZERO,
         val type: TimerType = TimerType.INTERVAL,
         val callback: (progress: Double) -> Unit
     )
@@ -52,20 +54,29 @@ class RuntimeEngine(
         uiSystem.handleChar(char, scene.allEntities())
     }
 
-    fun forEvery(ms: Double, callback: () -> Unit) {
-        pendingTimers.add(Timer(intervalMs = ms, type = TimerType.INTERVAL) { callback() })
+    fun forEvery(interval: Duration, callback: () -> Unit) {
+        require(interval.isFinite() && interval > Duration.ZERO) {
+            "Timer interval must be finite and positive."
+        }
+        pendingTimers.add(Timer(interval = interval, type = TimerType.INTERVAL) { callback() })
     }
 
     fun everyFrame(callback: (dt: Double) -> Unit) {
-        timers.add(Timer(intervalMs = 0.0, type = TimerType.FOREVER) { callback(it) })
+        timers.add(Timer(interval = Duration.ZERO, type = TimerType.FOREVER) { callback(it) })
     }
 
-    fun after(ms: Double, callback: () -> Unit) {
-        pendingTimers.add(Timer(intervalMs = ms, type = TimerType.ONE_SHOT) { callback() })
+    fun after(delay: Duration, callback: () -> Unit) {
+        require(delay.isFinite() && delay >= Duration.ZERO) {
+            "Timer delay must be finite and non-negative."
+        }
+        pendingTimers.add(Timer(interval = delay, type = TimerType.ONE_SHOT) { callback() })
     }
 
-    fun during(ms: Double, callback: (progress: Double) -> Unit) {
-        pendingTimers.add(Timer(intervalMs = ms, type = TimerType.DURING, callback = callback))
+    fun during(duration: Duration, callback: (progress: Double) -> Unit) {
+        require(duration.isFinite() && duration > Duration.ZERO) {
+            "Timer duration must be finite and positive."
+        }
+        pendingTimers.add(Timer(interval = duration, type = TimerType.DURING, callback = callback))
     }
 
     override fun loadScene(scene: Scene) {
@@ -125,17 +136,17 @@ class RuntimeEngine(
         uiSystem.update(entities)
         entities.forEach { (it.painter as? Dynamic)?.update(dt) }
 
-        val dtMs = dt * 1000.0
+        val elapsed = dt.toDouble().seconds
         timers.removeAll { timer ->
-            timer.accumulator += dtMs
+            timer.accumulator += elapsed
             when (timer.type) {
                 TimerType.INTERVAL -> {
-                    while (timer.accumulator >= timer.intervalMs) { timer.accumulator -= timer.intervalMs; timer.callback(0.0) }
+                    while (timer.accumulator >= timer.interval) { timer.accumulator -= timer.interval; timer.callback(0.0) }
                     false
                 }
-                TimerType.ONE_SHOT -> { if (timer.accumulator >= timer.intervalMs) { timer.callback(1.0); true } else false }
+                TimerType.ONE_SHOT -> { if (timer.accumulator >= timer.interval) { timer.callback(1.0); true } else false }
                 TimerType.DURING -> {
-                    if (timer.accumulator < timer.intervalMs) { timer.callback((timer.accumulator / timer.intervalMs).coerceIn(0.0, 1.0)); false }
+                    if (timer.accumulator < timer.interval) { timer.callback((timer.accumulator / timer.interval).coerceIn(0.0, 1.0)); false }
                     else { timer.callback(1.0); true }
                 }
                 TimerType.FOREVER -> { timer.callback(dt.toDouble()); false }

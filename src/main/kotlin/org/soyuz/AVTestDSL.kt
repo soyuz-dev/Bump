@@ -1,5 +1,8 @@
 package org.soyuz
 
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+
 import org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE
 import org.soyuz.engine.audio.AudioSource
 import org.soyuz.engine.collision.Collider
@@ -147,7 +150,7 @@ fun main() = bump {
             ) {
                 println("Play clicked!")
 
-                runtime.during(500.0) { progress ->
+                runtime.during(500.milliseconds) { progress ->
                     val intensity =
                         (1.0 - progress) * 20.0
 
@@ -164,7 +167,7 @@ fun main() = bump {
                     gameCamera.setPosition(ox, oy)
                 }
 
-                runtime.after(500.0) {
+                runtime.after(500.milliseconds) {
                     gameCamera.setPosition(0f, 0f)
                 }
             }
@@ -179,13 +182,13 @@ fun main() = bump {
 
             // ─── Audio Timers ────────────────
 
-            runtime.forEvery(500.0) {
+            runtime.forEvery(500.milliseconds) {
                 AudioSource().play(
                     Assets.audio("click")
                 )
             }
 
-            runtime.after(1000.0) {
+            runtime.after(1.seconds) {
                 AudioSource().play(
                     Assets.audio("meow")
                 )

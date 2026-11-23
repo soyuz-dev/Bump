@@ -130,41 +130,25 @@ fun main() = bump {
             )
         )
 
-        // Register input on each persistent scene.
-        val allScenes = listOf(
-            circles,
-            rectangles,
-            triangles
-        )
-
-        for (current in allScenes) {
-            current.onKeyDown(GLFW_KEY_1) {
-                engine.loadScene(circles)
-            }
-
-            current.onKeyDown(GLFW_KEY_2) {
-                engine.loadScene(rectangles)
-            }
-
-            current.onKeyDown(GLFW_KEY_3) {
-                engine.loadScene(triangles)
-            }
-
-            current.onKeyDown(GLFW_KEY_ESCAPE) {
-                engine.quit()
-            }
-        }
-
         // Explicit initial scene
         engine.loadScene(circles)
 
-        // Global per-frame behaviour
-        engine { dt ->
+        engine.onFrame { dt ->
+            if (engine.input.isKeyJustPressed(GLFW_KEY_P)) engine.togglePause()
+            val selected = when {
+                engine.input.isKeyJustPressed(GLFW_KEY_1) -> circles
+                engine.input.isKeyJustPressed(GLFW_KEY_2) -> rectangles
+                engine.input.isKeyJustPressed(GLFW_KEY_3) -> triangles
+                else -> null
+            }
+            if (selected != null && engine.activeScene !== selected) engine.loadScene(selected)
+            if (engine.input.isKeyJustPressed(GLFW_KEY_ESCAPE)) engine.quit()
+
             val sceneName =
                 engine.activeScene?.id ?: "none"
-
+            val mode = if (engine.isPaused) "PAUSED" else "RUNNING"
             window.title =
-                "Scene: $sceneName | FPS: " +
+                "Scene: $sceneName | $mode | P: pause/resume | FPS: " +
                         (1.0 / dt).toInt()
         }
     }
@@ -192,7 +176,7 @@ private fun SceneScope.coroutineDemo(font: Font) {
     statusLine(
         "coroutine_controls",
         560.0,
-        "1/2/3: scenes | C: stop clock | X: remove probe | R: respawn | Esc: quit",
+        "1/2/3: scene | P: pause | C: clock | X: remove | R: respawn | Esc: quit",
         14f
     )
 

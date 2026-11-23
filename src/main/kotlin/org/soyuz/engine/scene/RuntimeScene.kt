@@ -113,8 +113,8 @@ open class RuntimeScene(
         return keyboard.onKeyHeld(key, owner, callback)
     }
 
-    override fun dispatchInput(input: Input, dt: Double) {
-        keyboard.dispatch(input, dt)
+    override fun dispatchInput(input: Input, dt: Double, shouldContinue: () -> Boolean) {
+        keyboard.dispatch(input, dt, shouldContinue)
     }
 
     override fun after(delay: Duration, owner: GameEntity?, callback: () -> Unit): Subscription {

@@ -702,6 +702,35 @@ Unobserved failures cancel the failing behaviour and propagate from an active sc
 
 ---
 
+### Simulation Pause
+
+Each engine has independent simulation pause controls:
+
+```kotlin
+engine.pause()
+engine.resume()
+engine.togglePause()
+val paused = engine.isPaused
+```
+
+Pausing freezes physics, gameplay keyboard and UI input, dynamic painters, engine timers, scene and entity timers, and coroutine progression through `wait`, `until`, and `await`. Remaining timer time, animation progress, and coroutine state are preserved. Scene switching does not change the engine's paused state. Window events and rendering keep running.
+
+Use `onFrame` for pause controls and presentation that must remain responsive:
+
+```kotlin
+engine.onFrame {
+    if (engine.input.isKeyJustPressed(GLFW_KEY_P)) engine.togglePause()
+}
+```
+
+`onFrame` returns a cancellable `Subscription` and runs before simulation work on every positive frame, including while paused or without an active scene. It receives real frame seconds. The existing `engine { ... }` and `everyFrame` callbacks remain simulation callbacks and freeze while paused. Changes made from `onFrame` are explicit actions outside the paused simulation.
+
+Paused frame time is never accumulated for physics or timers. A pause/resume transition inside `onFrame` skips simulation work for that frame, so resuming does not feed its paused delta into the game. A partial physics timestep is preserved; unfinished full catch-up steps are discarded on pause. Gameplay key and character events received while paused are not replayed, and pending mouse presses and drags are discarded.
+
+Pause takes effect between simulation phases, keyboard handlers, and timer callbacks. A physics step or UI update already running finishes before the next phase is skipped. Coroutine code already running continues until it returns or suspends. Even pausing and immediately resuming in one callback stops remaining simulation dispatch in that update. Cancellation and cleanup remain available while paused.
+
+In `MultiSceneDSL.kt`, press P to pause or resume. The title keeps updating and shows PAUSED or RUNNING. Probe motion, intro waits, and scene clocks freeze; 1/2/3 still switch scenes and Esc still quits. Gameplay controls C/X/R remain frozen until resume.
+
 ## Windowing
 
 ### Standard Window (DSL)

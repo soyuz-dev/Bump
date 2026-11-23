@@ -38,7 +38,7 @@ interface Scene {
         callback: (Double) -> Unit
     ): Subscription
 
-    fun dispatchInput(input: Input, dt: Double)
+    fun dispatchInput(input: Input, dt: Double, shouldContinue: () -> Boolean = { true })
 
     fun after(delay: Duration, owner: GameEntity? = null, callback: () -> Unit): Subscription
 

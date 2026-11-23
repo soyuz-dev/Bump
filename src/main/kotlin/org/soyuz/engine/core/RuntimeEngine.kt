@@ -2,7 +2,6 @@ package org.soyuz.engine.core
 
 import org.soyuz.engine.physics.PhysicsSystem
 import org.soyuz.engine.behaviour.Subscription
-import org.soyuz.engine.timing.TimerScheduler
 import org.soyuz.engine.render.Camera
 import org.soyuz.engine.render.RenderSystem
 import org.soyuz.engine.render.Shader
@@ -14,7 +13,6 @@ import org.soyuz.input.Input
 import org.soyuz.util.Dynamic
 import org.soyuz.windowing.Window
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
 
 class RuntimeEngine(
     val window: Window,
@@ -25,7 +23,19 @@ class RuntimeEngine(
     val input = Input(window.handle)
     private val uiSystem = UISystem(input, camera)
     val ui = UI(uiSystem)
-    private val timerScheduler = TimerScheduler()
+    private val simulation = SimulationLoop(DEFAULT_PHYSICS_TIMESTEP)
+
+    override val isPaused: Boolean
+        get() = simulation.isPaused
+
+    override fun pause() = simulation.pause()
+
+    override fun resume() = simulation.resume()
+
+    override fun togglePause() = simulation.togglePause()
+
+    override fun onFrame(callback: (dt: Double) -> Unit): Subscription =
+        simulation.frames.everyFrame(callback)
 
     lateinit var renderSystem: RenderSystem
     lateinit var shader: Shader
@@ -43,21 +53,22 @@ class RuntimeEngine(
     }
 
     fun onChar(char: Char) {
+        if (!running || isPaused) return
         val scene = currentScene ?: return
         uiSystem.handleChar(char, scene.allEntities())
     }
 
     fun forEvery(interval: Duration, callback: () -> Unit): Subscription =
-        timerScheduler.forEvery(interval, callback)
+        simulation.timers.forEvery(interval, callback)
 
     fun everyFrame(callback: (dt: Double) -> Unit): Subscription =
-        timerScheduler.everyFrame(callback)
+        simulation.timers.everyFrame(callback)
 
     fun after(delay: Duration, callback: () -> Unit): Subscription =
-        timerScheduler.after(delay, callback)
+        simulation.timers.after(delay, callback)
 
     fun during(duration: Duration, callback: (progress: Double) -> Unit): Subscription =
-        timerScheduler.during(duration, callback)
+        simulation.timers.during(duration, callback)
 
     override fun loadScene(scene: Scene) {
         sceneRevision++
@@ -76,7 +87,7 @@ class RuntimeEngine(
     }
 
     override fun stop() {
-        timerScheduler.clear()
+        simulation.clear()
         if (running) {
             running = false
             currentScene?.cleanup()
@@ -87,45 +98,31 @@ class RuntimeEngine(
         }
     }
 
-    private var physicsAccumulator = 0.0
-
-
     override fun update(dt: Float) {
         if (!running || dt <= 0f || !dt.isFinite()) return
-        val scene = currentScene ?: return
+        val scene = currentScene
         val revision = sceneRevision
-
-        scene.dispatchInput(input, dt.toDouble())
-
-        if (!running || sceneRevision != revision) return
-
-        physicsAccumulator += dt.toDouble()
-
-        while (physicsAccumulator >= DEFAULT_PHYSICS_TIMESTEP) {
-            val activePhysicsSystem =
-                (scene as? RuntimeScene)
-                    ?.physicsContext
-                    ?.physicsSystem
-                    ?: physicsSystem
-
-            activePhysicsSystem?.step(
-                scene,
-                DEFAULT_PHYSICS_TIMESTEP
-            )
-            physicsAccumulator -= DEFAULT_PHYSICS_TIMESTEP
-        }
-
-        val entities = scene.allEntities()
-        uiSystem.update(entities)
-        entities.forEach { (it.painter as? Dynamic)?.update(dt) }
-
-        if (!running) return
-        val elapsed = dt.toDouble().seconds
-        timerScheduler.update(elapsed)
-        if (!running || sceneRevision != revision) return
-        scene.updateTimers(elapsed) {
-            running && currentScene === scene && sceneRevision == revision
-        }
+        simulation.update(
+            dt = dt,
+            isRunning = { running },
+            isActive = { scene != null && currentScene === scene && sceneRevision == revision },
+            dispatchInput = { delta, shouldContinue -> scene?.dispatchInput(input, delta, shouldContinue) },
+            stepPhysics = { delta ->
+                if (scene != null) {
+                    val physics = (scene as? RuntimeScene)?.physicsContext?.physicsSystem ?: physicsSystem
+                    physics?.step(scene, delta)
+                }
+            },
+            updateUI = { scene?.let { uiSystem.update(it.allEntities()) } },
+            updateDynamics = { delta, shouldContinue ->
+                for (entity in scene?.allEntities().orEmpty()) {
+                    if (!shouldContinue()) break
+                    (entity.painter as? Dynamic)?.update(delta)
+                }
+            },
+            updateSceneTimers = { elapsed, shouldContinue -> scene?.updateTimers(elapsed, shouldContinue) }
+        )
+        if (isPaused) uiSystem.suspendInput()
     }
 
     fun render() {

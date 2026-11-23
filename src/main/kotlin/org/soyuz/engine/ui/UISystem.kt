@@ -142,6 +142,21 @@ class UISystem(private val input: Input, private val camera: Camera) {
         }
     }
 
+    fun suspendInput() {
+        lastMousePos = camera.screenToWorld(input.mousePosition)
+        dragStartPos = lastMousePos
+        pressedId = null
+        dragId = null
+        lastClickTime = 0.0
+        lastClickId = null
+        lastClickButton = -1
+        states.values.forEach {
+            it.pressedButtons.clear()
+            it.isDragging = false
+            it.dragButton = -1
+        }
+    }
+
     fun getState(entityId: String): UIState = states.getOrPut(entityId) { UIState() }
 
     fun handleChar(char: Char, entities: List<GameEntity>) {

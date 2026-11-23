@@ -78,12 +78,13 @@ internal class SceneKeyboardDispatcher {
         callback,
     )
 
-    fun dispatch(input: Input, dt: Double) {
+    fun dispatch(input: Input, dt: Double, shouldContinue: () -> Boolean = { true }) {
         dispatch(
             dt,
             input::isKeyDown,
             input::isKeyJustPressed,
-            input::isKeyJustReleased
+            input::isKeyJustReleased,
+            shouldContinue
         )
     }
 
@@ -92,6 +93,7 @@ internal class SceneKeyboardDispatcher {
         isDown: (Int) -> Boolean,
         isJustPressed: (Int) -> Boolean,
         isJustReleased: (Int) -> Boolean,
+        shouldContinue: () -> Boolean = { true },
     ) {
         require(dt.isFinite() && dt >= 0.0) {
             "Delta time must be finite and non-negative"
@@ -100,6 +102,7 @@ internal class SceneKeyboardDispatcher {
         val snapshot = registrations.toList()
 
         for (registration in snapshot) {
+            if (!shouldContinue()) break
             if (!registration.subscription.isActive) continue
 
             val shouldFire = when (registration.type) {

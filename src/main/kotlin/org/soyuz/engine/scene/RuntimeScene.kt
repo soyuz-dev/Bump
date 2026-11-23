@@ -11,6 +11,8 @@ import org.soyuz.engine.events.CollisionEventType
 import org.soyuz.engine.events.EventBus
 import org.soyuz.engine.physics.ScenePhysicsContext
 import org.soyuz.input.Input
+import org.soyuz.engine.timing.TimerScheduler
+import kotlin.time.Duration
 
 open class RuntimeScene(
     final override val id: String
@@ -19,6 +21,7 @@ open class RuntimeScene(
         linkedMapOf()
 
     private val keyboard = SceneKeyboardDispatcher()
+    private val timerScheduler = TimerScheduler()
 
     private val collisionCallbacks =
         mutableListOf<Pair<Subscription, (CollisionEvent) -> Unit>>()
@@ -106,6 +109,22 @@ open class RuntimeScene(
         keyboard.dispatch(input, dt)
     }
 
+    override fun after(delay: Duration, callback: () -> Unit): Subscription =
+        timerScheduler.after(delay, callback)
+
+    override fun during(duration: Duration, callback: (progress: Double) -> Unit): Subscription =
+        timerScheduler.during(duration, callback)
+
+    override fun forEvery(interval: Duration, callback: () -> Unit): Subscription =
+        timerScheduler.forEvery(interval, callback)
+
+    override fun everyFrame(callback: (dt: Double) -> Unit): Subscription =
+        timerScheduler.everyFrame(callback)
+
+    override fun updateTimers(elapsed: Duration, shouldContinue: () -> Boolean) {
+        timerScheduler.update(elapsed, shouldContinue)
+    }
+
     private fun validateOwner(owner: GameEntity?) {
         if (owner == null) return
 
@@ -129,6 +148,7 @@ open class RuntimeScene(
 
 
     override fun cleanup() {
+        timerScheduler.clear()
         entities.keys.toList().forEach { entityId ->
             removeEntity(entityId)
         }

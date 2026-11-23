@@ -5,6 +5,7 @@ import org.soyuz.engine.behaviour.Subscription
 import org.soyuz.engine.entity.GameEntity
 import org.soyuz.engine.events.CollisionEvent
 import org.soyuz.input.Input
+import kotlin.time.Duration
 
 interface Scene {
     val id: String
@@ -36,6 +37,16 @@ interface Scene {
     ): Subscription
 
     fun dispatchInput(input: Input, dt: Double)
+
+    fun after(delay: Duration, callback: () -> Unit): Subscription
+
+    fun during(duration: Duration, callback: (progress: Double) -> Unit): Subscription
+
+    fun forEvery(interval: Duration, callback: () -> Unit): Subscription
+
+    fun everyFrame(callback: (dt: Double) -> Unit): Subscription
+
+    fun updateTimers(elapsed: Duration, shouldContinue: () -> Boolean = { true })
 
     fun init()
 

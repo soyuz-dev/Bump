@@ -590,6 +590,30 @@ engine.during(500.milliseconds) { progress ->
 
 Frame callbacks still receive `dt` as a `Double` in seconds; `during` receives normalized `Double` progress from 0 to 1. Delays must be finite and non-negative; repeating intervals and `during` durations must be finite and positive. A zero delay is deferred rather than executed inline. Coroutine-based `wait(Duration)` behaviour is planned, but not part of v1.6-alpha.
 
+All four timer methods return a `Subscription`, including the `engine { ... }` shorthand:
+
+```kotlin
+val spawning = engine.forEvery(1.seconds) { spawnEnemy() }
+spawning.cancel()
+```
+
+Cancellation is immediate and safe inside callbacks, including during interval catch-up. Completed one-shot and `during` timers become inactive before their final callback. Engine timers continue across scene switches and are cancelled when the engine stops.
+
+Use scene timers for gameplay that should pause while its scene is inactive:
+
+```kotlin
+scene("game") {
+    val spawning = forEvery(2.seconds) { spawnEnemy() }
+    after(30.seconds) { spawning.cancel() }
+    during(500.milliseconds) { progress -> animateIntro(progress) }
+    everyFrame { dt -> updateGameplay(dt) }
+}
+```
+
+These methods also exist on `Scene` and `RuntimeScene` and return cancellable subscriptions. Each scene owns its scheduler. Inactive scenes preserve elapsed time and pending registrations; cleanup cancels both active and pending timers. Scene timers run after engine timers. If a scene changes earlier in an engine update, neither the old nor the new scene's timers advance in that update. If a scene timer switches scenes, remaining callbacks and interval catch-up stop immediately, even if the callback switches back. The new scene begins advancing on the next engine update. Timers skipped after a switch do not accrue that interrupted update's elapsed time.
+
+`TimerScheduler` in `org.soyuz.engine.timing` owns timer storage and execution independently of the engine. Registrations made before an update start accumulating in that update; registrations made inside callbacks wait until the next update. This applies to `everyFrame` too. A zero elapsed duration does not advance or dispatch timers. The scheduler accepts `Duration` in `update`, so it can also be driven without a window. Use it on one thread; recursive updates are rejected. A failing callback cancels its timer and propagates the exception, leaving later timers unadvanced for that update.
+
 ---
 
 ## Windowing

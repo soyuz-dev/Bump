@@ -150,7 +150,7 @@ fun main() = bump {
             ) {
                 println("Play clicked!")
 
-                runtime.during(500.milliseconds) { progress ->
+                during(500.milliseconds) { progress ->
                     val intensity =
                         (1.0 - progress) * 20.0
 
@@ -167,7 +167,7 @@ fun main() = bump {
                     gameCamera.setPosition(ox, oy)
                 }
 
-                runtime.after(500.milliseconds) {
+                after(500.milliseconds) {
                     gameCamera.setPosition(0f, 0f)
                 }
             }
@@ -182,13 +182,13 @@ fun main() = bump {
 
             // ─── Audio Timers ────────────────
 
-            runtime.forEvery(500.milliseconds) {
+            forEvery(500.milliseconds) {
                 AudioSource().play(
                     Assets.audio("click")
                 )
             }
 
-            runtime.after(1.seconds) {
+            after(1.seconds) {
                 AudioSource().play(
                     Assets.audio("meow")
                 )
@@ -202,7 +202,7 @@ fun main() = bump {
             var fpsAccumulator = 0.0
             var fpsFrameCount = 0
 
-            runtime { dt ->
+            everyFrame { dt ->
                 time += dt
 
                 // Rolling FPS average over 1 second

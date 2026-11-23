@@ -180,7 +180,7 @@ The DSL is no longer just a bunch of unit tests.
 - **Event bus:** `RuntimeEventBus` with type-based pub/sub, `CollisionEvent`, scene-specific collision routing
 - **Scene graph:** `Scene`, `RuntimeScene`, persistent scenes for instant switching, scene-owned physics contexts
 - **Observable entities:** Position, rotation, shape fire change listeners
-- **Timer system:** Deferred registration via `pendingTimers`
+- **Timer system:** Standalone `TimerScheduler` with `Duration`, cancellable subscriptions, deferred registration, and scene-owned timers that pause while inactive
 - **Debug utility:** Zero-overhead logging via `Debug`
 - **Cross-platform:** Windows, Linux, macOS via auto-detected natives
 

@@ -1,6 +1,8 @@
 package org.soyuz.engine.core
 
 import org.soyuz.engine.physics.PhysicsSystem
+import org.soyuz.engine.behaviour.Subscription
+import org.soyuz.engine.timing.TimerScheduler
 import org.soyuz.engine.render.Camera
 import org.soyuz.engine.render.RenderSystem
 import org.soyuz.engine.render.Shader
@@ -23,26 +25,17 @@ class RuntimeEngine(
     val input = Input(window.handle)
     private val uiSystem = UISystem(input, camera)
     val ui = UI(uiSystem)
-    private val pendingTimers = mutableListOf<Timer>()
+    private val timerScheduler = TimerScheduler()
 
     lateinit var renderSystem: RenderSystem
     lateinit var shader: Shader
 
     private var currentScene: Scene? = null
+    private var sceneRevision = 0L
     val activeScene: Scene?
         get() = currentScene
     private var running = false
     private var renderResourcesCleaned = false
-    private val timers = mutableListOf<Timer>()
-
-    private data class Timer(
-        val interval: Duration,
-        var accumulator: Duration = Duration.ZERO,
-        val type: TimerType = TimerType.INTERVAL,
-        val callback: (progress: Double) -> Unit
-    )
-
-    private enum class TimerType { INTERVAL, ONE_SHOT, DURING, FOREVER }
 
     fun init() {
         window.setCharCallback { onChar(it) }
@@ -54,32 +47,20 @@ class RuntimeEngine(
         uiSystem.handleChar(char, scene.allEntities())
     }
 
-    fun forEvery(interval: Duration, callback: () -> Unit) {
-        require(interval.isFinite() && interval > Duration.ZERO) {
-            "Timer interval must be finite and positive."
-        }
-        pendingTimers.add(Timer(interval = interval, type = TimerType.INTERVAL) { callback() })
-    }
+    fun forEvery(interval: Duration, callback: () -> Unit): Subscription =
+        timerScheduler.forEvery(interval, callback)
 
-    fun everyFrame(callback: (dt: Double) -> Unit) {
-        timers.add(Timer(interval = Duration.ZERO, type = TimerType.FOREVER) { callback(it) })
-    }
+    fun everyFrame(callback: (dt: Double) -> Unit): Subscription =
+        timerScheduler.everyFrame(callback)
 
-    fun after(delay: Duration, callback: () -> Unit) {
-        require(delay.isFinite() && delay >= Duration.ZERO) {
-            "Timer delay must be finite and non-negative."
-        }
-        pendingTimers.add(Timer(interval = delay, type = TimerType.ONE_SHOT) { callback() })
-    }
+    fun after(delay: Duration, callback: () -> Unit): Subscription =
+        timerScheduler.after(delay, callback)
 
-    fun during(duration: Duration, callback: (progress: Double) -> Unit) {
-        require(duration.isFinite() && duration > Duration.ZERO) {
-            "Timer duration must be finite and positive."
-        }
-        pendingTimers.add(Timer(interval = duration, type = TimerType.DURING, callback = callback))
-    }
+    fun during(duration: Duration, callback: (progress: Double) -> Unit): Subscription =
+        timerScheduler.during(duration, callback)
 
     override fun loadScene(scene: Scene) {
+        sceneRevision++
         currentScene = scene
         if (running) scene.init()
     }
@@ -95,6 +76,7 @@ class RuntimeEngine(
     }
 
     override fun stop() {
+        timerScheduler.clear()
         if (running) {
             running = false
             currentScene?.cleanup()
@@ -111,10 +93,11 @@ class RuntimeEngine(
     override fun update(dt: Float) {
         if (!running || dt <= 0f || !dt.isFinite()) return
         val scene = currentScene ?: return
+        val revision = sceneRevision
 
         scene.dispatchInput(input, dt.toDouble())
 
-        if (!running || currentScene !== scene) return
+        if (!running || sceneRevision != revision) return
 
         physicsAccumulator += dt.toDouble()
 
@@ -136,25 +119,13 @@ class RuntimeEngine(
         uiSystem.update(entities)
         entities.forEach { (it.painter as? Dynamic)?.update(dt) }
 
+        if (!running) return
         val elapsed = dt.toDouble().seconds
-        timers.removeAll { timer ->
-            timer.accumulator += elapsed
-            when (timer.type) {
-                TimerType.INTERVAL -> {
-                    while (timer.accumulator >= timer.interval) { timer.accumulator -= timer.interval; timer.callback(0.0) }
-                    false
-                }
-                TimerType.ONE_SHOT -> { if (timer.accumulator >= timer.interval) { timer.callback(1.0); true } else false }
-                TimerType.DURING -> {
-                    if (timer.accumulator < timer.interval) { timer.callback((timer.accumulator / timer.interval).coerceIn(0.0, 1.0)); false }
-                    else { timer.callback(1.0); true }
-                }
-                TimerType.FOREVER -> { timer.callback(dt.toDouble()); false }
-            }
+        timerScheduler.update(elapsed)
+        if (!running || sceneRevision != revision) return
+        scene.updateTimers(elapsed) {
+            running && currentScene === scene && sceneRevision == revision
         }
-
-        timers.addAll(pendingTimers)
-        pendingTimers.clear()
     }
 
     fun render() {

@@ -8,6 +8,7 @@ import org.soyuz.engine.entity.DefaultGameEntity
 import org.soyuz.engine.events.CollisionEvent
 import org.soyuz.engine.physics.PhysicsSystem
 import org.soyuz.engine.scene.RuntimeScene
+import kotlin.time.Duration
 
 @BumpDsl
 class SceneScope internal constructor(
@@ -67,4 +68,16 @@ class SceneScope internal constructor(
     fun onCollisionEvent(
         callback: (CollisionEvent) -> Unit
     ): Subscription = scene.onCollisionEvent(callback)
+
+    fun after(delay: Duration, callback: () -> Unit): Subscription =
+        scene.after(delay, callback)
+
+    fun during(duration: Duration, callback: (progress: Double) -> Unit): Subscription =
+        scene.during(duration, callback)
+
+    fun forEvery(interval: Duration, callback: () -> Unit): Subscription =
+        scene.forEvery(interval, callback)
+
+    fun everyFrame(callback: (dt: Double) -> Unit): Subscription =
+        scene.everyFrame(callback)
 }
